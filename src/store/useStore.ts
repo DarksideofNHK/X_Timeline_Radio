@@ -98,7 +98,7 @@ function generatePostScript(post: BuzzPost, index: number, total: number): strin
 // リトライ設定
 const MAX_RETRIES = 3;
 const INITIAL_RETRY_DELAY = 2000; // 2秒
-const REQUEST_INTERVAL = 500; // リクエスト間隔（ms）
+const REQUEST_INTERVAL = 100; // リクエスト間隔（ms）- プリフェッチ効率化のため短縮
 
 let lastRequestTime = 0;
 
@@ -1122,30 +1122,69 @@ export const useStore = create<AppState>()(
         try {
           const { currentSectionIndex: startSection, currentChunkIndex: startChunk } = get();
 
-          // セクションを順番に再生
-          for (let secIdx = startSection; secIdx < aiProgram.sections.length; secIdx++) {
+          // 全チャンクをフラット化してインデックス管理
+          type ChunkInfo = { secIdx: number; chunkIdx: number; text: string };
+          const allChunks: ChunkInfo[] = [];
+          for (let secIdx = 0; secIdx < aiProgram.sections.length; secIdx++) {
             const section = aiProgram.sections[secIdx];
-            set({ currentSectionIndex: secIdx });
+            for (let chunkIdx = 0; chunkIdx < section.chunks.length; chunkIdx++) {
+              allChunks.push({ secIdx, chunkIdx, text: section.chunks[chunkIdx] });
+            }
+          }
 
-            console.log(`[AIPlayback] Playing section ${secIdx + 1}/${aiProgram.sections.length}: ${section.title}`);
+          // 開始位置を計算
+          let startIdx = 0;
+          for (let i = 0; i < allChunks.length; i++) {
+            if (allChunks[i].secIdx === startSection && allChunks[i].chunkIdx === startChunk) {
+              startIdx = i;
+              break;
+            }
+          }
 
-            // チャンクを順番に再生
-            const chunkStart = secIdx === startSection ? startChunk : 0;
-            for (let chunkIdx = chunkStart; chunkIdx < section.chunks.length; chunkIdx++) {
-              // 停止リクエストチェック
-              if (get().stopRequested) {
-                console.log('[AIPlayback] Stop requested, breaking...');
-                set({ isPlaying: false, stopRequested: false });
-                return;
-              }
+          console.log(`[AIPlayback] Starting from chunk ${startIdx + 1}/${allChunks.length}`);
 
-              set({ currentChunkIndex: chunkIdx });
+          // プリフェッチキュー（2つ先まで）
+          const PREFETCH_AHEAD = 2;
+          const prefetchPromises: Map<number, Promise<string>> = new Map();
 
-              const chunk = section.chunks[chunkIdx];
-              console.log(`[AIPlayback] Chunk ${chunkIdx + 1}/${section.chunks.length}: ${chunk.substring(0, 30)}...`);
+          // 初期プリフェッチ（最初の3チャンク）
+          for (let i = startIdx; i < Math.min(startIdx + PREFETCH_AHEAD + 1, allChunks.length); i++) {
+            console.log(`[AIPlayback] Initial prefetch chunk ${i + 1}...`);
+            prefetchPromises.set(i, generateAudioUrl(allChunks[i].text, ttsConfig));
+          }
 
-              // 音声生成と再生
-              const audioUrl = await generateAudioUrl(chunk, ttsConfig);
+          // チャンクを順番に再生
+          for (let i = startIdx; i < allChunks.length; i++) {
+            // 停止リクエストチェック
+            if (get().stopRequested) {
+              console.log('[AIPlayback] Stop requested, breaking...');
+              set({ isPlaying: false, stopRequested: false });
+              return;
+            }
+
+            const chunkInfo = allChunks[i];
+            set({ currentSectionIndex: chunkInfo.secIdx, currentChunkIndex: chunkInfo.chunkIdx });
+
+            // セクション変更時にログ
+            if (i === startIdx || allChunks[i - 1].secIdx !== chunkInfo.secIdx) {
+              const section = aiProgram.sections[chunkInfo.secIdx];
+              console.log(`[AIPlayback] Section ${chunkInfo.secIdx + 1}/${aiProgram.sections.length}: ${section.title}`);
+            }
+
+            console.log(`[AIPlayback] Chunk ${i + 1}/${allChunks.length}: ${chunkInfo.text.substring(0, 30)}...`);
+
+            // 次のチャンクをプリフェッチ開始
+            const nextPrefetchIdx = i + PREFETCH_AHEAD + 1;
+            if (nextPrefetchIdx < allChunks.length && !prefetchPromises.has(nextPrefetchIdx)) {
+              console.log(`[AIPlayback] Prefetch chunk ${nextPrefetchIdx + 1}...`);
+              prefetchPromises.set(nextPrefetchIdx, generateAudioUrl(allChunks[nextPrefetchIdx].text, ttsConfig));
+            }
+
+            // プリフェッチ済みの音声を取得して再生
+            const audioPromise = prefetchPromises.get(i);
+            if (audioPromise) {
+              const audioUrl = await audioPromise;
+              prefetchPromises.delete(i); // メモリ解放
               await playAudioUrl(audioUrl, speed);
             }
           }
