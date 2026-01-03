@@ -16,19 +16,5 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <script>
-      // Service Worker登録
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then((registration) => {
-              console.log('[App] Service Worker registered:', registration.scope);
-            })
-            .catch((error) => {
-              console.error('[App] Service Worker registration failed:', error);
-            });
-        });
-      }
-    </script>
   </body>
 </html>
