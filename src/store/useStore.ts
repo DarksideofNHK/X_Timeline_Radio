@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { ShowProgram, Segment, BuzzPost, ApiConfig, Genre, OpenAIVoiceId, ProgramMode, AIScriptProgram, ScriptSection, Theme } from '../types';
+import type { ShowProgram, Segment, BuzzPost, ApiConfig, Genre, OpenAIVoiceId, ProgramMode, AIScriptProgram, ScriptSection, Theme, RelatedPost } from '../types';
 import { GENRES, PROGRAM_SEGMENTS, POSTS_PER_SEGMENT } from '../lib/genres';
 import { bgmManager, type BgmSource } from '../lib/bgm';
 import { audioCache } from '../lib/audioCache';
@@ -323,6 +323,7 @@ interface AppState {
   currentChunkIndex: number;
   isGeneratingScript: boolean;
   collectedPosts: Record<Genre, BuzzPost[]> | null;  // 収集した投稿（両モードで共有）
+  collectedAnnotations: RelatedPost[] | null;  // Grokが参照した関連投稿URL
 
   // 再生状態
   isPlaying: boolean;
@@ -382,6 +383,7 @@ export const useStore = create<AppState>()(
       currentChunkIndex: 0,
       isGeneratingScript: false,
       collectedPosts: null,
+      collectedAnnotations: null,
 
       // 保存済みスクリプト
       savedScripts: getSavedScripts(),
@@ -1014,6 +1016,7 @@ export const useStore = create<AppState>()(
           currentChunkIndex: 0,
           isGeneratingScript: false,
           collectedPosts: null,
+          collectedAnnotations: null,
           // 共通
           isPlaying: false,
           isInitializing: false,
@@ -1104,6 +1107,8 @@ export const useStore = create<AppState>()(
             allPosts = cache.posts;
           } else {
             // 全ジャンルのPostを並行収集
+            const allAnnotations: RelatedPost[] = [];
+
             const collectPromises = PROGRAM_SEGMENTS.map(async (genre) => {
               try {
                 const response = await fetch('/api/collect-posts', {
@@ -1120,6 +1125,14 @@ export const useStore = create<AppState>()(
                 }
 
                 const data = await response.json();
+                // annotationsを収集
+                if (data.annotations && Array.isArray(data.annotations)) {
+                  for (const ann of data.annotations) {
+                    if (!allAnnotations.some(a => a.statusId === ann.statusId)) {
+                      allAnnotations.push(ann);
+                    }
+                  }
+                }
                 return { genre, posts: data.posts as BuzzPost[] };
               } catch (e) {
                 console.error(`[AIProgram] Error collecting ${genre}:`, e);
@@ -1135,6 +1148,10 @@ export const useStore = create<AppState>()(
 
             // キャッシュに保存
             savePostsCache(allPosts);
+
+            // annotationsを保存
+            console.log(`[AIProgram] Collected ${allAnnotations.length} unique annotations`);
+            set({ collectedAnnotations: allAnnotations });
           }
 
           // 投稿数を確認

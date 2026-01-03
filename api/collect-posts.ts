@@ -98,17 +98,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const data = await response.json();
-    const posts = extractPostsFromResponse(data, genre);
+    const { posts, annotations } = extractPostsFromResponse(data, genre);
 
-    return res.status(200).json({ posts, genre });
+    return res.status(200).json({ posts, genre, annotations });
   } catch (error: any) {
     console.error('[API] Error collecting posts:', error);
     return res.status(500).json({ error: error.message });
   }
 }
 
-function extractPostsFromResponse(data: any, genre: string): any[] {
+interface RelatedPost {
+  url: string;
+  statusId: string;
+}
+
+function extractPostsFromResponse(data: any, genre: string): { posts: any[]; annotations: RelatedPost[] } {
   const posts: any[] = [];
+  const allAnnotations: RelatedPost[] = [];
   let fullText = '';
 
   // output配列からテキストを抽出
@@ -183,5 +189,30 @@ function extractPostsFromResponse(data: any, genre: string): any[] {
     }
   }
 
-  return posts.slice(0, 10);
+  // annotationsからURL抽出
+  if (data.output && Array.isArray(data.output)) {
+    for (const item of data.output) {
+      if (item.content && Array.isArray(item.content)) {
+        for (const content of item.content) {
+          if (content.annotations && Array.isArray(content.annotations)) {
+            for (const ann of content.annotations) {
+              const url = ann.url || ann.url_citation?.url;
+              if (url && url.includes('/status/')) {
+                const statusIdMatch = url.match(/status\/(\d+)/);
+                if (statusIdMatch) {
+                  const statusId = statusIdMatch[1];
+                  const normalizedUrl = `https://x.com/i/status/${statusId}`;
+                  if (!allAnnotations.some(a => a.statusId === statusId)) {
+                    allAnnotations.push({ url: normalizedUrl, statusId });
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return { posts: posts.slice(0, 10), annotations: allAnnotations };
 }

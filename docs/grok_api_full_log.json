@@ -1,0 +1,722 @@
+{
+  "timestamp": "2026-01-03T14:40:38.880Z",
+  "request": {
+    "url": "https://api.x.ai/v1/responses",
+    "method": "POST",
+    "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer {API_KEY}"
+    },
+    "body": {
+      "model": "grok-4-1-fast-reasoning",
+      "tools": [
+        {
+          "type": "x_search",
+          "x_search": {
+            "from_date": "2026-01-03",
+            "to_date": "2026-01-03"
+          }
+        }
+      ],
+      "input": "あなたはXのバズ投稿キュレーターです。\n\n【検索条件】\n- ジャンル: 今バズってる話題\n- 条件: 直近数時間で急激に拡散されているPost\n- 直近6時間以内に投稿された日本語のPost\n- 以下の「盛り上がり指標」が高いものを優先:\n  1. いいね数が多い（100以上推奨）\n  2. リツイート/引用が多い\n  3. リプライが活発（議論になっている）\n  4. 短時間で急激に伸びている\n\n【出力形式】\n以下のJSON形式で10件出力してください:\n\n```json\n{\n  \"posts\": [\n    {\n      \"author_username\": \"実際のユーザー名\",\n      \"author_name\": \"表示名\",\n      \"text\": \"投稿内容（280文字以内）\",\n      \"url\": \"https://x.com/username/status/投稿ID\",\n      \"likes\": 数値,\n      \"retweets\": 数値,\n      \"replies\": 数値,\n      \"buzz_reason\": \"なぜバズっているか一言\"\n    }\n  ]\n}\n```\n\n【重要】\n- 必ず実在するPostのURLを含めてください\n- 架空の投稿を作成しないでください\n- URLは必ず https://x.com/ユーザー名/status/数字 の形式で"
+    }
+  },
+  "response": {
+    "created_at": 1767451206,
+    "id": "5479022a-546e-f3ae-d425-a41305aba7ab",
+    "max_output_tokens": null,
+    "model": "grok-4-1-fast-reasoning",
+    "object": "response",
+    "output": [
+      {
+        "call_id": "xs_call_34275269",
+        "input": "{\"query\":\"lang:ja since:2026-01-03 min_faves:100 min_retweets:10 filter:has_engagement\",\"limit\":50,\"mode\":\"Top\"}",
+        "name": "x_keyword_search",
+        "type": "custom_tool_call",
+        "id": "ctc_5479022a-546e-f3ae-d425-a41305aba7ab_xs_call_34275269",
+        "status": "completed"
+      },
+      {
+        "call_id": "xs_call_32191007",
+        "input": "{\"query\":\"lang:ja since:2026-01-03 min_faves:100 min_retweets:10 filter:has_engagement\",\"limit\":50,\"mode\":\"Latest\"}",
+        "name": "x_keyword_search",
+        "type": "custom_tool_call",
+        "id": "ctc_5479022a-546e-f3ae-d425-a41305aba7ab_xs_call_32191007",
+        "status": "completed"
+      },
+      {
+        "call_id": "xs_call_62723563",
+        "input": "{\"query\":\"lang:ja since:2026-01-03_06:00:00_JST min_faves:50 min_retweets:5 filter:has_engagement\",\"limit\":30,\"mode\":\"Latest\"}",
+        "name": "x_keyword_search",
+        "type": "custom_tool_call",
+        "id": "ctc_5479022a-546e-f3ae-d425-a41305aba7ab_xs_call_62723563",
+        "status": "completed"
+      },
+      {
+        "call_id": "xs_call_31139057",
+        "input": "{\"query\":\"直近でバズってる日本語の話題やニュース\",\"limit\":20,\"from_date\":\"2026-01-03\",\"min_score_threshold\":0.25}",
+        "name": "x_semantic_search",
+        "type": "custom_tool_call",
+        "id": "ctc_5479022a-546e-f3ae-d425-a41305aba7ab_xs_call_31139057",
+        "status": "completed"
+      },
+      {
+        "content": [
+          {
+            "type": "output_text",
+            "text": "{\n  \"posts\": [\n    {\n      \"author_username\": \"ponto_nei\",\n      \"author_name\": \"先斗寧🫐ぽんとねい\",\n      \"text\": \"ご視聴ありがとうございました！\\n\\n驚かせてしまったとは思うのですがこうして新しい姿をお見せすることができて今は一安心しています…！\\n見慣れなかったり受け入れられなかったりあると思うのですが無理せず見守ってくれると嬉しいです🙇‍♂️\\n\\nこれからもよろしくお願いします✨\",\n      \"url\": \"https://x.com/ponto_nei/status/2007425467868164500\",\n      \"likes\": 71408,\n      \"retweets\": 12031,\n      \"replies\": 469,\n      \"buzz_reason\": \"にじさんじライバーの新姿発表で大反響\"\n    },\n    {\n      \"author_username\": \"nijisanji_app\",\n      \"author_name\": \"にじさんじ公式🌈🕒\",\n      \"text\": \"【新春！#にじさんじ麻雀杯2026 開催決定！】\\n\\n1月10日(土)、11日(日)、12日(月・祝)に\\n恒例の『新春！にじさんじ麻雀杯』が今年も開催！\\n\\n参加者は国内・海外を含めてなんと✨🎍102名🎍✨\\n\\nメンバー発表&抽選会は\\n🗓1月5日(月)20時スタート！\",\n      \"url\": \"https://x.com/nijisanji_app/status/2007424264249717179\",\n      \"likes\": 44641,\n      \"retweets\": 14787,\n      \"replies\": 130,\n      \"buzz_reason\": \"にじさんじ大規模麻雀イベント告知\"\n    },\n    {\n      \"author_username\": \"hanazawa_staff\",\n      \"author_name\": \"花澤香菜\",\n      \"text\": \"あけましておめでとうございます！！！\\n今年もよろしくお願いいたします🐴✨\\n初めてさわやか食べられたよ！\\n美味しかった〜☺️\",\n      \"url\": \"https://x.com/hanazawa_staff/status/2007404097146892321\",\n      \"likes\": 82588,\n      \"retweets\": 4363,\n      \"replies\": 664,\n      \"buzz_reason\": \"声優の新年挨拶写真が可愛く拡散\"\n    },\n    {\n      \"author_username\": \"conan_anime1000\",\n      \"author_name\": \"アニメ名探偵コナン【公式】⚽️\",\n      \"text\": \"━━━━━━━━━━━━━\\n　　　快斗＆青子　\\n　  新ビジュアル解禁✨\\n「キッドVS白馬 青の玉座」\\n　　  coming soon‼️\\n━━━━━━━━━━━━\",\n      \"url\": \"https://x.com/conan_anime1000/status/2007369101342339523\",\n      \"likes\": 58159,\n      \"retweets\": 13505,\n      \"replies\": 221,\n      \"buzz_reason\": \"コナン新ビジュアル解禁でファン熱狂\"\n    },\n    {\n      \"author_username\": \"DEATHDOL_NOTE\",\n      \"author_name\": \"DEATHDOL NOTE\",\n      \"text\": \"初めましてデスドルノートと申します。はじめしゃちょーさんの繋がり(2023年8月〜)と名乗る人物が2024年12月にはじめしゃちょーさんから「会いたくなった」とDMが来た告発がきております。\",\n      \"url\": \"https://x.com/DEATHDOL_NOTE/status/2007406840817369532\",\n      \"likes\": 41233,\n      \"retweets\": 1521,\n      \"replies\": 935,\n      \"buzz_reason\": \"YouTuberスキャンダル暴露で議論沸騰\"\n    },\n    {\n      \"author_username\": \"PIYO_KAERU\",\n      \"author_name\": \"ぴよ@カエルと暮らす\",\n      \"text\": \"←寝てる\\n     起きてる→\",\n      \"url\": \"https://x.com/PIYO_KAERU/status/2007257872565186780\",\n      \"likes\": 96714,\n      \"retweets\": 8190,\n      \"replies\": 111,\n      \"buzz_reason\": \"カエルの寝起きイラストが癒し拡散\"\n    },\n    {\n      \"author_username\": \"onipro\",\n      \"author_name\": \"萩原幸也 ®️\",\n      \"text\": \"神社にあった干支の絵が良かったから見て\",\n      \"url\": \"https://x.com/onipro/status/2007343843310813235\",\n      \"likes\": 57679,\n      \"retweets\": 4711,\n      \"replies\": 45,\n      \"buzz_reason\": \"新年干支イラストのクールさが話題\"\n    },\n    {\n      \"author_username\": \"sputnik_jp\",\n      \"author_name\": \"Sputnik 日本\",\n      \"text\": \"【世界最高齢の猫が30歳の誕生日】\\n\\nブリティッシュショートヘアのフロッシーが30歳の誕生日（1995年12月29日生まれ）を迎えた。\",\n      \"url\": \"https://x.com/sputnik_jp/status/2007325181791158463\",\n      \"likes\": 57003,\n      \"retweets\": 9361,\n      \"replies\": 89,\n      \"buzz_reason\": \"世界最高齢猫30歳誕生日の驚き\"\n    },\n    {\n      \"author_username\": \"KAGAYA_11949\",\n      \"author_name\": \"KAGAYA\",\n      \"text\": \"今年最初の満月。\\n富士山の山頂から昇る姿、パール富士です。\\n（先ほど、静岡県にて撮影）\\n2026年が皆様にとって良い年になりますように。\",\n      \"url\": \"https://x.com/KAGAYA_11949/status/2007423756826734797\",\n      \"likes\": 13841,\n      \"retweets\": 3082,\n      \"replies\": 37,\n      \"buzz_reason\": \"美しいパール富士の新年満月写真\"\n    },\n    {\n      \"author_username\": \"uesaka_official\",\n      \"author_name\": \"上坂すみれ_official\",\n      \"text\": \"艦これ新春ライブ！ありがとうございましたっ！吹雪、司令官にお逢いできて…本当に幸せですっ！（すみぺ）\",\n      \"url\": \"https://x.com/uesaka_official/status/2007450037765185605\",\n      \"likes\": 4355,\n      \"retweets\": 769,\n      \"replies\": 70,\n      \"buzz_reason\": \"艦これライブ報告でファン歓喜\"\n    }\n  ]\n}",
+            "logprobs": [],
+            "annotations": [
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007460475986948600"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007300541786083568"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007410962274611616"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007459432956039444"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007460872285802512"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007397106009682395"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007457869705179608"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007459828822618587"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007459465788870679"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007406590366720175"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007288756945227888"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007353636809306179"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007418399996162404"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007443091243049143"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007458560146583820"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007304663343739045"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007423756826734797"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007451948425888065"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007460681470329035"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007460592664342800"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007458256483168698"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007459233394991179"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007404097146892321"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007412367915921718"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007458471512551482"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007459693812236770"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007424264249717179"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007458426847183048"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007459434776367174"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007437035418906943"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007457796556763527"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007445589940940860"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007429815453004178"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007415600768004470"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007431730224042168"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007356168247853542"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007400776365428938"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007460331585482939"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007459072203776211"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007325181791158463"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007376391977963844"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007458393137549780"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007444574852264099"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007458911159488619"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007458962053136581"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007435971923718602"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007459488211612052"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007340713546305552"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007460776114553168"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007448452557377948"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007458647882789246"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007260935749324930"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/1379815456903585801"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007457765044957656"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007459539365330986"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007452560542822730"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007457637508755704"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007457999913377965"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007457336667914460"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007425467868164500"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007341306092367996"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007295855116550640"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007272675887178127"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007249060269633991"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007459564640448941"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007458346056487161"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007458175646089457"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007450037765185605"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007425197054591262"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007459115468038212"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007408573266198787"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007248095525110098"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007424215708770348"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007411360955806153"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007457982473482337"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007379678127112462"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007460547932094667"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007458939080945909"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007460669201797412"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007420499991900215"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007377959775285717"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007445066697371711"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007390636396458389"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007460377022636361"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007459629903520069"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007460812231934279"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007457576053776425"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007419742475431998"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007444337676673221"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007447016411213878"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007458225948660097"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007458795983622516"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007459434151530670"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007459689836188030"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007325790455902491"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007418359152046409"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007441986937352338"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007429407154262288"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007459768911249465"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007451346304135466"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007460942876176415"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007460552206102842"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007459811424907606"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007458267299987677"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007459559716065781"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007460380214243718"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007391488670323154"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007406840817369532"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007459826918395949"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007458164699009418"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007461158744199612"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007416212960227467"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007257872565186780"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007336482164617539"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007443598501908752"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007457671373565991"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007444107178783212"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007415503896391775"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007343052923514925"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007334341446381957"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007254834601140255"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007460795945496934"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007457456860082260"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007400415432978556"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007259833469481465"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007457606214762574"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007458473928278286"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007420110261367197"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007435795721007231"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007460091696390284"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007419176093372798"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007457733432492056"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007320729952620931"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007339248509419859"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007252413150044608"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007458683643429332"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007459036245938490"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007253491014901963"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007459728897736817"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007312848092078134"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007460173078479036"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007459434457424325"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2006652419015585795"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007460669462065537"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007343843310813235"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007458683161371134"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007369101342339523"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007395921110483455"
+              },
+              {
+                "type": "url_citation",
+                "url": "https://x.com/i/status/2007446435738931233"
+              }
+            ]
+          }
+        ],
+        "id": "msg_5479022a-546e-f3ae-d425-a41305aba7ab",
+        "role": "assistant",
+        "type": "message",
+        "status": "completed"
+      }
+    ],
+    "parallel_tool_calls": true,
+    "previous_response_id": null,
+    "reasoning": {
+      "effort": null,
+      "summary": null
+    },
+    "temperature": null,
+    "text": {
+      "format": {
+        "type": "text"
+      }
+    },
+    "tool_choice": "auto",
+    "tools": [
+      {
+        "type": "x_search"
+      }
+    ],
+    "top_p": null,
+    "usage": {
+      "input_tokens": 52204,
+      "input_tokens_details": {
+        "cached_tokens": 2609
+      },
+      "output_tokens": 3678,
+      "output_tokens_details": {
+        "reasoning_tokens": 1882
+      },
+      "total_tokens": 55882,
+      "num_sources_used": 0,
+      "num_server_side_tools_used": 4,
+      "cost_in_usd_ticks": 318884500,
+      "server_side_tool_usage_details": {
+        "web_search_calls": 0,
+        "x_search_calls": 4,
+        "code_interpreter_calls": 0,
+        "file_search_calls": 0,
+        "mcp_calls": 0,
+        "document_search_calls": 0
+      }
+    },
+    "user": null,
+    "incomplete_details": null,
+    "status": "completed",
+    "store": true,
+    "metadata": {}
+  }
+}
