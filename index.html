@@ -16,5 +16,11 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // 古いService Workerを新しい自己解除版で置き換える
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' });
+      }
+    </script>
   </body>
 </html>
