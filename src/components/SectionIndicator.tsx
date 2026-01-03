@@ -18,10 +18,10 @@ export function SectionIndicator() {
   const progress = ((currentSectionIndex / totalSections) * 100).toFixed(0);
 
   return (
-    <div className="bg-slate-800 rounded-lg p-4">
+    <div className="bg-bg-card rounded-xl p-4 border border-border-light shadow-sm">
       {/* 生成日時 */}
       {aiProgram.generatedAt && (
-        <div className="text-xs text-slate-500 mb-2">
+        <div className="text-xs text-text-disabled mb-2">
           生成日時: {formatScriptDate(aiProgram.generatedAt)}
         </div>
       )}
@@ -31,21 +31,21 @@ export function SectionIndicator() {
         <div className="flex items-center gap-2">
           <span className="text-2xl">{getSectionIcon(currentSection.type, currentSection.genre)}</span>
           <div>
-            <h3 className="font-bold text-lg">{currentSection.title}</h3>
-            <p className="text-slate-400 text-sm">
+            <h3 className="font-bold text-lg text-text-primary">{currentSection.title}</h3>
+            <p className="text-text-secondary text-sm">
               セクション {currentSectionIndex + 1} / {totalSections}
               {totalChunks > 1 && ` (パート ${currentChunkIndex + 1}/${totalChunks})`}
             </p>
           </div>
         </div>
         <div className="text-right">
-          <p className="text-slate-400 text-sm">番組進行</p>
-          <p className="text-xl font-bold text-purple-400">{progress}%</p>
+          <p className="text-text-secondary text-sm">番組進行</p>
+          <p className="text-xl font-bold text-purple-600">{progress}%</p>
         </div>
       </div>
 
       {/* プログレスバー */}
-      <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+      <div className="h-2 bg-bg-menu rounded-full overflow-hidden">
         <div
           className="h-full bg-gradient-to-r from-purple-600 to-purple-400 transition-all duration-300"
           style={{ width: `${progress}%` }}
@@ -61,8 +61,8 @@ export function SectionIndicator() {
               index === currentSectionIndex
                 ? 'bg-purple-600 text-white'
                 : index < currentSectionIndex
-                  ? 'bg-green-900/50 text-green-400'
-                  : 'bg-slate-700 text-slate-400'
+                  ? 'bg-green-100 text-green-700'
+                  : 'bg-bg-menu text-text-secondary'
             }`}
           >
             {getSectionIcon(section.type, section.genre)}

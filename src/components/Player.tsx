@@ -60,7 +60,7 @@ export function Player() {
           {/* 再生/停止ボタン */}
           <button
             onClick={handlePlayPause}
-            className="w-14 h-14 bg-purple-600 hover:bg-purple-500 rounded-full flex items-center justify-center text-2xl flex-shrink-0"
+            className="w-14 h-14 bg-purple-600 hover:bg-purple-500 rounded-full flex items-center justify-center text-2xl flex-shrink-0 text-white shadow-lg transition-all"
           >
             {isPlaying ? '⏸️' : '▶️'}
           </button>
@@ -71,30 +71,30 @@ export function Player() {
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 {isPlaying ? (
-                  <span className="flex items-center gap-1.5 text-green-400 text-sm font-bold">
-                    <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                  <span className="flex items-center gap-1.5 text-green-600 text-sm font-bold">
+                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
                     ON AIR
                   </span>
                 ) : (
-                  <span className="text-slate-400 text-sm">停止中</span>
+                  <span className="text-text-disabled text-sm">停止中</span>
                 )}
-                <span className="text-slate-500">|</span>
-                <span className="text-sm truncate">
+                <span className="text-border-light">|</span>
+                <span className="text-sm truncate text-text-primary">
                   {currentSection?.title || 'セクション'}
                 </span>
               </div>
-              <span className="text-sm text-slate-400">
+              <span className="text-sm text-text-secondary">
                 {currentSectionIndex + 1}/{totalSections}
               </span>
             </div>
 
             {/* 進捗バー */}
             <div>
-              <div className="flex justify-between text-xs text-slate-400 mb-1">
+              <div className="flex justify-between text-xs text-text-secondary mb-1">
                 <span>🎙️ AI番組</span>
                 <span>{progress}%</span>
               </div>
-              <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
+              <div className="h-1.5 bg-bg-menu rounded-full overflow-hidden">
                 <div
                   className="h-full bg-purple-500 transition-all duration-300"
                   style={{ width: `${progress}%` }}
@@ -107,7 +107,7 @@ export function Player() {
           <button
             onClick={handleNextSection}
             disabled={currentSectionIndex >= totalSections - 1}
-            className="w-10 h-10 bg-slate-700 hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-full flex items-center justify-center text-lg flex-shrink-0"
+            className="w-10 h-10 bg-bg-menu hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed rounded-full flex items-center justify-center text-lg flex-shrink-0 border border-border-light transition-colors"
             title="次のセクション"
           >
             ⏭️
@@ -143,7 +143,7 @@ export function Player() {
         {/* 再生/停止ボタン */}
         <button
           onClick={isPlaying ? stopPlayback : startPlayback}
-          className="w-14 h-14 bg-blue-600 hover:bg-blue-500 rounded-full flex items-center justify-center text-2xl flex-shrink-0"
+          className="w-14 h-14 bg-accent hover:bg-accent-hover rounded-full flex items-center justify-center text-2xl flex-shrink-0 text-white shadow-lg transition-all"
         >
           {isPlaying ? '⏸️' : '▶️'}
         </button>
@@ -154,32 +154,32 @@ export function Player() {
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               {isPlaying ? (
-                <span className="flex items-center gap-1.5 text-green-400 text-sm font-bold">
-                  <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                <span className="flex items-center gap-1.5 text-green-600 text-sm font-bold">
+                  <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
                   ON AIR
                 </span>
               ) : (
-                <span className="text-slate-400 text-sm">停止中</span>
+                <span className="text-text-disabled text-sm">停止中</span>
               )}
-              <span className="text-slate-500">|</span>
-              <span className="text-sm">
+              <span className="text-border-light">|</span>
+              <span className="text-sm text-text-primary">
                 {currentSegment?.icon} {currentSegment?.name}
               </span>
             </div>
-            <span className="text-sm text-slate-400">
+            <span className="text-sm text-text-secondary">
               {currentPostInSegment}/{currentSegmentPostCount}件目
             </span>
           </div>
 
           {/* 進捗バー */}
           <div>
-            <div className="flex justify-between text-xs text-slate-400 mb-1">
+            <div className="flex justify-between text-xs text-text-secondary mb-1">
               <span>📊 {currentPostNumber} / {program.totalPosts} Posts</span>
               <span>{progress}%</span>
             </div>
-            <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
+            <div className="h-1.5 bg-bg-menu rounded-full overflow-hidden">
               <div
-                className="h-full bg-blue-500 transition-all duration-300"
+                className="h-full bg-accent transition-all duration-300"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -189,7 +189,7 @@ export function Player() {
         {/* スキップボタン */}
         <button
           onClick={nextSegment}
-          className="w-10 h-10 bg-slate-700 hover:bg-slate-600 rounded-full flex items-center justify-center text-lg flex-shrink-0"
+          className="w-10 h-10 bg-bg-menu hover:bg-gray-200 rounded-full flex items-center justify-center text-lg flex-shrink-0 border border-border-light transition-colors"
           title="次のセグメント"
         >
           ⏭️

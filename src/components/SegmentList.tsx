@@ -29,8 +29,8 @@ export function SegmentList() {
   if (!program) return null;
 
   return (
-    <div className="bg-slate-800 rounded-lg p-4">
-      <h3 className="text-sm font-bold text-slate-400 mb-3">
+    <div className="bg-bg-card rounded-xl p-4 border border-border-light shadow-sm">
+      <h3 className="text-sm font-bold text-text-secondary mb-3">
         📋 セグメント一覧
       </h3>
       <div className="space-y-2">
@@ -42,29 +42,29 @@ export function SegmentList() {
           return (
             <div
               key={segment.id}
-              className={`flex items-center gap-3 p-2 rounded ${
+              className={`flex items-center gap-3 p-2 rounded-lg ${
                 isCurrent
-                  ? 'bg-blue-900/50 border border-blue-700'
+                  ? 'bg-accent/10 border border-accent'
                   : isDone
-                    ? 'bg-slate-700/50'
+                    ? 'bg-bg-menu'
                     : isError
-                      ? 'bg-red-900/30'
-                      : 'bg-slate-700/30'
+                      ? 'bg-red-50 border border-red-200'
+                      : 'bg-bg-menu/50'
               }`}
             >
               <span className="text-lg">{STATUS_ICONS[segment.status]}</span>
               <span className="text-lg">{segment.icon}</span>
-              <span className={isCurrent ? 'font-bold' : ''}>{segment.name}</span>
-              <span className="text-slate-500 text-sm">
+              <span className={`text-text-primary ${isCurrent ? 'font-bold' : ''}`}>{segment.name}</span>
+              <span className="text-text-disabled text-sm">
                 ({segment.posts.length}件)
               </span>
               {isCurrent && (
-                <span className="ml-auto text-blue-400 text-sm">
+                <span className="ml-auto text-accent text-sm font-medium">
                   ◀ {STATUS_LABELS[segment.status]}
                 </span>
               )}
               {!isCurrent && segment.status !== 'pending' && (
-                <span className="ml-auto text-slate-500 text-sm">
+                <span className="ml-auto text-text-disabled text-sm">
                   {STATUS_LABELS[segment.status]}
                 </span>
               )}
