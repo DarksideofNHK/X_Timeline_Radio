@@ -76,13 +76,10 @@ function XEmbed({ statusId }: XEmbedProps) {
         href={`https://x.com/i/status/${statusId}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="block p-4 bg-bg-menu rounded-lg border border-border-light hover:border-accent transition-colors"
+        className="block p-4 bg-bg-menu rounded-lg border border-border-light hover:border-accent transition-colors text-center"
       >
         <div className="text-text-secondary text-sm">
-          埋め込みを読み込めませんでした
-        </div>
-        <div className="text-accent text-xs mt-1">
-          クリックして元投稿を開く →
+          Xで表示 →
         </div>
       </a>
     );
@@ -147,19 +144,11 @@ export function RelatedPosts() {
                 埋め込みが表示されない場合は、リンクをクリックして確認できます。
               </div>
 
-              {/* 投稿リスト */}
-              <div className="p-4 space-y-4">
+              {/* 投稿リスト - PC: 2列, スマホ: 1列 */}
+              <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                 {currentPosts.map((post) => (
-                  <div key={post.statusId} className="relative">
+                  <div key={post.statusId}>
                     <XEmbed statusId={post.statusId} />
-                    <a
-                      href={post.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="absolute top-2 right-2 bg-bg-card/80 backdrop-blur px-2 py-1 rounded text-xs text-accent hover:underline"
-                    >
-                      🔗 開く
-                    </a>
                   </div>
                 ))}
               </div>
