@@ -21,6 +21,7 @@ const CACHE_DURATION = 30 * 60 * 1000; // 30分
 
 interface PostsCache {
   posts: Record<Genre, BuzzPost[]>;
+  annotations?: RelatedPost[];  // Grokが参照した関連投稿URL
   timestamp: number;
 }
 
@@ -47,14 +48,15 @@ function loadPostsCache(): PostsCache | null {
   }
 }
 
-function savePostsCache(posts: Record<Genre, BuzzPost[]>): void {
+function savePostsCache(posts: Record<Genre, BuzzPost[]>, annotations?: RelatedPost[]): void {
   try {
     const data: PostsCache = {
       posts,
+      annotations,
       timestamp: Date.now(),
     };
     localStorage.setItem(CACHE_KEY, JSON.stringify(data));
-    console.log('[Cache] Saved posts to cache');
+    console.log(`[Cache] Saved posts and ${annotations?.length || 0} annotations to cache`);
   } catch (e) {
     console.error('[Cache] Failed to save:', e);
   }
@@ -484,6 +486,11 @@ export const useStore = create<AppState>()(
               index,
               posts: cache.posts[genre] || [],
             }));
+            // キャッシュからannotationsも復元
+            if (cache.annotations && cache.annotations.length > 0) {
+              console.log(`[Program] Restored ${cache.annotations.length} annotations from cache`);
+              set({ collectedAnnotations: cache.annotations });
+            }
           } else {
             // 全ジャンルのPostを並行収集
             console.log('[Program] Collecting posts for all genres...');
@@ -523,14 +530,14 @@ export const useStore = create<AppState>()(
             const fetchResults = await Promise.all(collectPromises);
             results = fetchResults;
 
-            // キャッシュに保存
+            // キャッシュに保存（annotationsも含む）
             const postsMap: Record<Genre, BuzzPost[]> = {} as Record<Genre, BuzzPost[]>;
             fetchResults.forEach((r) => {
               postsMap[PROGRAM_SEGMENTS[r.index]] = r.posts;
             });
-            savePostsCache(postsMap);
+            savePostsCache(postsMap, allAnnotations);
 
-            // annotationsを保存
+            // annotationsを状態に保存
             console.log(`[Program] Collected ${allAnnotations.length} unique annotations`);
             set({ collectedAnnotations: allAnnotations });
           }
@@ -1119,6 +1126,11 @@ export const useStore = create<AppState>()(
           if (cache) {
             console.log('[AIProgram] Using cached posts...');
             allPosts = cache.posts;
+            // キャッシュからannotationsも復元
+            if (cache.annotations && cache.annotations.length > 0) {
+              console.log(`[AIProgram] Restored ${cache.annotations.length} annotations from cache`);
+              set({ collectedAnnotations: cache.annotations });
+            }
           } else {
             // 全ジャンルのPostを並行収集
             const allAnnotations: RelatedPost[] = [];
@@ -1160,10 +1172,10 @@ export const useStore = create<AppState>()(
               allPosts[r.genre] = r.posts;
             });
 
-            // キャッシュに保存
-            savePostsCache(allPosts);
+            // キャッシュに保存（annotationsも含む）
+            savePostsCache(allPosts, allAnnotations);
 
-            // annotationsを保存
+            // annotationsを状態に保存
             console.log(`[AIProgram] Collected ${allAnnotations.length} unique annotations`);
             set({ collectedAnnotations: allAnnotations });
           }
@@ -1476,6 +1488,12 @@ export const useStore = create<AppState>()(
           // 保存されたテーマを適用
           if (state?.audioSettings?.theme) {
             document.documentElement.setAttribute('data-theme', state.audioSettings.theme);
+          }
+          // キャッシュからannotationsを復元
+          const cache = loadPostsCache();
+          if (cache?.annotations && cache.annotations.length > 0) {
+            console.log(`[Store] Restoring ${cache.annotations.length} annotations from cache`);
+            useStore.setState({ collectedAnnotations: cache.annotations });
           }
         }
       },
