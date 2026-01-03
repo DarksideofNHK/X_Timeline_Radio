@@ -236,6 +236,18 @@ async function generateAudioUrl(
 }
 
 // 音声URLを再生（完了を待つ）- BGMダッキング対応・再生速度対応
+// 現在再生中の音声要素（即座に停止するために保持）
+let currentAudioElement: HTMLAudioElement | null = null;
+
+// 音声を即座に停止する関数
+function stopCurrentAudio() {
+  if (currentAudioElement) {
+    currentAudioElement.pause();
+    currentAudioElement.src = '';
+    currentAudioElement = null;
+  }
+}
+
 async function playAudioUrl(audioUrl: string, speed: number = 1.0): Promise<void> {
   // TTS再生前にBGMをダッキング
   if (bgmManager.getIsPlaying()) {
@@ -247,7 +259,11 @@ async function playAudioUrl(audioUrl: string, speed: number = 1.0): Promise<void
       const audioElement = new Audio(audioUrl);
       audioElement.playbackRate = speed; // 再生速度を設定
 
+      // 現在の音声要素を保存（停止用）
+      currentAudioElement = audioElement;
+
       audioElement.onended = async () => {
+        currentAudioElement = null;
         URL.revokeObjectURL(audioUrl);
         // TTS終了後にBGMを戻す
         if (bgmManager.getIsPlaying()) {
@@ -257,6 +273,7 @@ async function playAudioUrl(audioUrl: string, speed: number = 1.0): Promise<void
       };
 
       audioElement.onerror = () => {
+        currentAudioElement = null;
         URL.revokeObjectURL(audioUrl);
         reject(new Error('Audio playback failed'));
       };
@@ -921,10 +938,15 @@ export const useStore = create<AppState>()(
       // 停止
       stopPlayback: () => {
         console.log('[Playback] Stop requested by user');
+
+        // 現在再生中の音声を即座に停止
+        stopCurrentAudio();
+
         // BGMも停止
         if (bgmManager.getIsPlaying()) {
           bgmManager.stop();
         }
+
         set({ stopRequested: true, isPlaying: false });
       },
 
@@ -954,11 +976,9 @@ export const useStore = create<AppState>()(
 
       // リセット
       reset: () => {
-        const { currentAudio } = get();
-        if (currentAudio) {
-          currentAudio.pause();
-          currentAudio.src = '';
-        }
+        // 現在再生中の音声を即座に停止
+        stopCurrentAudio();
+
         // BGMも停止
         if (bgmManager.getIsPlaying()) {
           bgmManager.stop();
