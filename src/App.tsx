@@ -257,7 +257,7 @@ export default function App() {
                     AI番組
                   </div>
                   <div className="text-xs text-text-secondary mt-1">
-                    30分番組を自動生成
+                    20分番組を自動生成
                   </div>
                 </button>
               </div>
@@ -285,7 +285,7 @@ export default function App() {
               {/* APIキー状況 */}
               {hasApiKeys && (
                 <p className="text-green-600 text-sm mt-4">
-                  ✅ 準備完了 - 約30分・7ジャンル・70投稿
+                  ✅ 準備完了 - 約20分・7ジャンル・70投稿
                 </p>
               )}
             </div>
@@ -364,7 +364,7 @@ export default function App() {
               </h2>
               <p className="text-text-secondary">
                 {isGeneratingScript
-                  ? 'Gemini AIが30分番組のスクリプトを作成しています'
+                  ? 'Gemini AIが20分番組のスクリプトを作成しています'
                   : '各ジャンルのバズ投稿を収集しています'}
               </p>
             </div>

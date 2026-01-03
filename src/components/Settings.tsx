@@ -206,7 +206,7 @@ export function Settings() {
             }`}
           >
             <div className="font-bold">🎙️ AI番組モード</div>
-            <div className="text-xs opacity-70 mt-1">Geminiが30分番組を生成</div>
+            <div className="text-xs opacity-70 mt-1">Geminiが20分番組を生成</div>
           </button>
         </div>
         {audioSettings.programMode === 'ai-script' && (
