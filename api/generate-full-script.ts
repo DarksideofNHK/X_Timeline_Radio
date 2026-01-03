@@ -32,6 +32,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const { allPosts, apiKey, style = 'comprehensive' } = req.body;
 
+    // 今日の日付情報を生成
+    const now = new Date();
+    const japanTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
+    const year = japanTime.getFullYear();
+    const month = japanTime.getMonth() + 1;
+    const day = japanTime.getDate();
+    const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+    const weekday = weekdays[japanTime.getDay()];
+    const todayString = `${year}年${month}月${day}日（${weekday}）`;
+
     // 全投稿をジャンルごとにフォーマット
     let allPostsText = '';
     let totalPostCount = 0;
@@ -97,16 +107,30 @@ scriptには「そのまま声に出して読める文章」のみを書いて�
 【番組概要】
 - 番組名: X Timeline Radio
 - コンセプト: Xで話題になっている投稿をテンポよく紹介
+- 今日の日付: ${todayString}
 
 【今回の投稿データ】
 ${allPostsText}
 
 【番組構成】
 
-1. **オープニング** (短く簡潔に)
-   - 「X Timeline Radio、始まります。今日の話題をお届けします。」程度でOK
-   - 自己紹介は不要
-   - 長い前置きは不要
+1. **オープニング**（30-45秒程度）
+   以下の流れで構成してください：
+
+   A. **挨拶と日付**
+      - 「X Timeline Radio、${month}月${day}日${weekday}曜日です。」
+
+   B. **今日は何の日？トリビア**（へーっとなる豆知識）
+      - 今日（${month}月${day}日）にちなんだ記念日、歴史的出来事、または季節の話題を1つ紹介
+      - 例：「今日1月3日は『ひとみの日』。1と3で『ひとみ』の語呂合わせだそうです。目を大切にしたいですね。」
+      - 例：「今日は1969年に日本初のコンビニが開店した日だそうです。今では生活に欠かせない存在ですよね。」
+      - 堅苦しくなく、ちょっとした雑学として軽く紹介
+      - 2-3文程度で簡潔に
+
+   C. **本編への導入**
+      - 「さて、それでは今日もXで話題の投稿をお届けしていきましょう。まずは今バズっている話題から。」
+
+   ※オープニングは番組の「つかみ」です。リスナーが「へー」と思える小ネタで興味を引いてください。
 
 2. **7つのコーナー**（各コーナー最低5件以上の投稿を紹介）
    - 🔥 今バズってる話題
@@ -159,8 +183,8 @@ JSON形式で出力。scriptは必ず「そのまま読み上げられる」テ�
       "id": "opening",
       "type": "opening",
       "title": "オープニング",
-      "script": "X Timeline Radio、始まります。今日もXで話題の投稿をお届けします。まずはバズっている話題から。",
-      "estimatedDuration": 15
+      "script": "X Timeline Radio、1月3日金曜日です。今日1月3日は『ひとみの日』だそうです。1と3で『ひとみ』の語呂合わせなんですね。目の健康、大事にしたいですね。さて、それでは今日もXで話題の投稿をお届けしていきましょう。まずは今バズっている話題から。",
+      "estimatedDuration": 30
     },
     {
       "id": "corner-entertainment",
