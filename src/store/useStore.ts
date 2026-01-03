@@ -487,6 +487,8 @@ export const useStore = create<AppState>()(
           } else {
             // 全ジャンルのPostを並行収集
             console.log('[Program] Collecting posts for all genres...');
+            const allAnnotations: RelatedPost[] = [];
+
             const collectPromises = PROGRAM_SEGMENTS.map(async (genre, index) => {
               try {
                 const response = await fetch('/api/collect-posts', {
@@ -503,6 +505,14 @@ export const useStore = create<AppState>()(
                 }
 
                 const data = await response.json();
+                // annotationsを収集
+                if (data.annotations && Array.isArray(data.annotations)) {
+                  for (const ann of data.annotations) {
+                    if (!allAnnotations.some(a => a.statusId === ann.statusId)) {
+                      allAnnotations.push(ann);
+                    }
+                  }
+                }
                 return { index, genre, posts: data.posts as BuzzPost[] };
               } catch (e) {
                 console.error(`[Program] Error collecting ${genre}:`, e);
@@ -519,6 +529,10 @@ export const useStore = create<AppState>()(
               postsMap[PROGRAM_SEGMENTS[r.index]] = r.posts;
             });
             savePostsCache(postsMap);
+
+            // annotationsを保存
+            console.log(`[Program] Collected ${allAnnotations.length} unique annotations`);
+            set({ collectedAnnotations: allAnnotations });
           }
 
           // デバッグ: 収集結果をログ
