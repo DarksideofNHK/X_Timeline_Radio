@@ -5,6 +5,7 @@ import { GENRES, PROGRAM_SEGMENTS, POSTS_PER_SEGMENT } from '../lib/genres';
 import { bgmManager, type BgmSource } from '../lib/bgm';
 import { audioCache } from '../lib/audioCache';
 import { getSavedScripts, saveScript, deleteScript, type SavedScript } from '../lib/scriptStorage';
+import { getApiKeys, saveApiKeys } from '../lib/apiKeyStorage';
 
 // 音声設定（OpenAI TTSのみ使用）
 interface AudioSettings {
@@ -315,11 +316,8 @@ export const useStore = create<AppState>()(
       isInitializing: false,
       currentAudio: null,
       stopRequested: false,
-      apiConfig: {
-        grokApiKey: '',
-        geminiApiKey: '',
-        openaiApiKey: '',
-      },
+      // APIキーは専用ストレージから読み込み（キャッシュクリアで消えない）
+      apiConfig: getApiKeys(),
       audioSettings: {
         openaiVoiceId: 'nova',
         speed: 1.0,
@@ -328,10 +326,13 @@ export const useStore = create<AppState>()(
       error: null,
 
       // 設定更新
-      setApiConfig: (config) =>
+      setApiConfig: (config) => {
+        // 専用ストレージにも保存
+        saveApiKeys(config);
         set((state) => ({
           apiConfig: { ...state.apiConfig, ...config },
-        })),
+        }));
+      },
 
       // 音声設定更新
       setAudioSettings: (settings) =>
@@ -1241,7 +1242,7 @@ export const useStore = create<AppState>()(
     {
       name: 'x-timeline-radio-v2',
       partialize: (state) => ({
-        apiConfig: state.apiConfig,
+        // apiConfigは専用ストレージで管理するため除外
         audioSettings: state.audioSettings,
         // シンプルモード番組状態
         program: state.program,
@@ -1265,6 +1266,8 @@ export const useStore = create<AppState>()(
         return {
           ...currentState,
           ...persistedState,
+          // APIキーは常に専用ストレージから読み込む
+          apiConfig: getApiKeys(),
           // 再生状態は常にfalseから開始（音声は再生されないため）
           isPlaying: false,
           isInitializing: false,
