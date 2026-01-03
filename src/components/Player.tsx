@@ -57,12 +57,32 @@ export function Player() {
     return (
       <div className="p-4">
         <div className="flex items-center gap-4">
-          {/* 再生/停止ボタン */}
+          {/* 再生ボタン */}
           <button
-            onClick={handlePlayPause}
-            className="w-14 h-14 bg-purple-600 hover:bg-purple-500 rounded-full flex items-center justify-center text-2xl flex-shrink-0 text-white shadow-lg transition-all"
+            onClick={() => playAIScript()}
+            disabled={isPlaying}
+            className={`w-12 h-12 rounded-full flex items-center justify-center text-xl flex-shrink-0 shadow-lg transition-all ${
+              isPlaying
+                ? 'bg-gray-400 cursor-not-allowed opacity-50'
+                : 'bg-purple-600 hover:bg-purple-500 text-white'
+            }`}
+            title="再生"
           >
-            {isPlaying ? '⏸️' : '▶️'}
+            ▶️
+          </button>
+
+          {/* 停止ボタン */}
+          <button
+            onClick={() => stopPlayback()}
+            disabled={!isPlaying}
+            className={`w-12 h-12 rounded-full flex items-center justify-center text-xl flex-shrink-0 shadow-lg transition-all ${
+              !isPlaying
+                ? 'bg-gray-400 cursor-not-allowed opacity-50'
+                : 'bg-red-600 hover:bg-red-500 text-white'
+            }`}
+            title="停止"
+          >
+            ⏹️
           </button>
 
           {/* メイン情報 */}
@@ -140,12 +160,32 @@ export function Player() {
   return (
     <div className="p-4">
       <div className="flex items-center gap-4">
-        {/* 再生/停止ボタン */}
+        {/* 再生ボタン */}
         <button
-          onClick={isPlaying ? stopPlayback : startPlayback}
-          className="w-14 h-14 bg-accent hover:bg-accent-hover rounded-full flex items-center justify-center text-2xl flex-shrink-0 text-white shadow-lg transition-all"
+          onClick={() => startPlayback()}
+          disabled={isPlaying}
+          className={`w-12 h-12 rounded-full flex items-center justify-center text-xl flex-shrink-0 shadow-lg transition-all ${
+            isPlaying
+              ? 'bg-gray-400 cursor-not-allowed opacity-50'
+              : 'bg-accent hover:bg-accent-hover text-white'
+          }`}
+          title="再生"
         >
-          {isPlaying ? '⏸️' : '▶️'}
+          ▶️
+        </button>
+
+        {/* 停止ボタン */}
+        <button
+          onClick={() => stopPlayback()}
+          disabled={!isPlaying}
+          className={`w-12 h-12 rounded-full flex items-center justify-center text-xl flex-shrink-0 shadow-lg transition-all ${
+            !isPlaying
+              ? 'bg-gray-400 cursor-not-allowed opacity-50'
+              : 'bg-red-600 hover:bg-red-500 text-white'
+          }`}
+          title="停止"
+        >
+          ⏹️
         </button>
 
         {/* メイン情報 */}
