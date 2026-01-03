@@ -28,6 +28,8 @@ export default function App() {
   const error = useStore((state) => state.error);
   const apiConfig = useStore((state) => state.apiConfig);
   const audioSettings = useStore((state) => state.audioSettings);
+  const setAudioSettings = useStore((state) => state.setAudioSettings);
+  const stopPlayback = useStore((state) => state.stopPlayback);
   const reset = useStore((state) => state.reset);
 
   const [showPlaylist, setShowPlaylist] = useState(false);
@@ -85,7 +87,42 @@ export default function App() {
               <span className="text-sm font-normal text-slate-400">v2</span>
             </h1>
             <div className="flex items-center gap-2">
+              {/* モード切り替え（番組がある時に表示） */}
               {hasProgramContent && (
+                <div className="flex rounded overflow-hidden">
+                  <button
+                    onClick={() => {
+                      if (isAIMode) {
+                        stopPlayback();
+                        setAudioSettings({ programMode: 'simple' });
+                      }
+                    }}
+                    className={`px-3 py-1 text-sm ${
+                      !isAIMode
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                    }`}
+                  >
+                    📻 シンプル
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!isAIMode) {
+                        stopPlayback();
+                        setAudioSettings({ programMode: 'ai-script' });
+                      }
+                    }}
+                    className={`px-3 py-1 text-sm ${
+                      isAIMode
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                    }`}
+                  >
+                    🎙️ AI番組
+                  </button>
+                </div>
+              )}
+              {hasProgramContent && !isAIMode && (
                 <button
                   onClick={() => setShowPlaylist(!showPlaylist)}
                   className={`px-3 py-1 rounded text-sm ${
