@@ -1253,16 +1253,39 @@ export const useStore = create<AppState>()(
         currentChunkIndex: state.currentChunkIndex,
         collectedPosts: state.collectedPosts,
       }),
+      // バージョン管理（状態構造が変わった時にマイグレーション）
+      version: 2,
       // 永続化されたstateと現在のstateをマージ
-      merge: (persistedState: any, currentState) => ({
-        ...currentState,
-        ...persistedState,
-        // 再生状態は常にfalseから開始（音声は再生されないため）
-        isPlaying: false,
-        isInitializing: false,
-        isGeneratingScript: false,
-        stopRequested: false,
-      }),
+      merge: (persistedState: any, currentState) => {
+        // persistedStateがnullや不正な場合は現在の状態を使用
+        if (!persistedState || typeof persistedState !== 'object') {
+          console.log('[Store] Invalid persisted state, using defaults');
+          return currentState;
+        }
+        return {
+          ...currentState,
+          ...persistedState,
+          // 再生状態は常にfalseから開始（音声は再生されないため）
+          isPlaying: false,
+          isInitializing: false,
+          isGeneratingScript: false,
+          stopRequested: false,
+        };
+      },
+      // リハイドレーション時のエラーハンドリング
+      onRehydrateStorage: () => (state, error) => {
+        if (error) {
+          console.error('[Store] Rehydration error:', error);
+          // エラー時はlocalStorageをクリア
+          try {
+            localStorage.removeItem('x-timeline-radio-v2');
+          } catch (e) {
+            console.error('[Store] Failed to clear localStorage:', e);
+          }
+        } else {
+          console.log('[Store] Rehydration complete');
+        }
+      },
     }
   )
 );
