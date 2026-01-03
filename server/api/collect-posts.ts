@@ -1,4 +1,4 @@
-import type { BuzzPost, Genre, CollectBuzzPostsResponse } from '../../src/types/index.js';
+import type { BuzzPost, Genre, CollectBuzzPostsResponse, RelatedPost } from '../../src/types/index.js';
 import { GENRES } from '../../src/lib/genres.js';
 
 const GROK_API_URL = 'https://api.x.ai/v1/responses';
@@ -124,19 +124,20 @@ export async function collectBuzzPosts(
     });
   }
 
-  // レスポンスからPostを抽出
-  const posts = await extractPostsFromResponse(data, genre);
+  // レスポンスからPostとannotationsを抽出
+  const { posts, annotations } = await extractPostsFromResponse(data, genre);
 
-  console.log(`[Grok] Found ${posts.length} posts for ${genreConfig.name}`);
+  console.log(`[Grok] Found ${posts.length} posts and ${annotations.length} annotations for ${genreConfig.name}`);
 
-  return { posts, genre };
+  return { posts, genre, annotations };
 }
 
 async function extractPostsFromResponse(
   data: any,
   genre: Genre
-): Promise<BuzzPost[]> {
+): Promise<{ posts: BuzzPost[]; annotations: RelatedPost[] }> {
   const posts: BuzzPost[] = [];
+  const allAnnotations: RelatedPost[] = [];
 
   // テキストを抽出（output配列から取得 - これが正しいソース）
   let fullText = '';
@@ -235,10 +236,9 @@ async function extractPostsFromResponse(
     console.log('[Extract] No JSON found in response');
   }
 
-  // citationsからもURLを収集してoEmbedで補完
+  // annotationsからURL抽出（すべてのURLを収集）
   const citationUrls: string[] = [];
 
-  // annotationsからURL抽出
   if (data.output && Array.isArray(data.output)) {
     for (const item of data.output) {
       if (item.content && Array.isArray(item.content)) {
@@ -246,8 +246,27 @@ async function extractPostsFromResponse(
           if (content.annotations && Array.isArray(content.annotations)) {
             for (const ann of content.annotations) {
               const url = ann.url || ann.url_citation?.url;
-              if (url && url.includes('/status/') && !url.includes('/i/status/')) {
-                citationUrls.push(url);
+              if (url && url.includes('/status/')) {
+                // status IDを抽出
+                const statusIdMatch = url.match(/status\/(\d+)/);
+                if (statusIdMatch) {
+                  const statusId = statusIdMatch[1];
+                  // 正規化したURLを作成
+                  const normalizedUrl = `https://x.com/i/status/${statusId}`;
+
+                  // 重複チェック
+                  if (!allAnnotations.some(a => a.statusId === statusId)) {
+                    allAnnotations.push({
+                      url: normalizedUrl,
+                      statusId: statusId
+                    });
+                  }
+
+                  // oEmbed補完用のURLリストにも追加（ユーザー名付きURLのみ）
+                  if (!url.includes('/i/status/')) {
+                    citationUrls.push(url);
+                  }
+                }
               }
             }
           }
@@ -255,6 +274,8 @@ async function extractPostsFromResponse(
       }
     }
   }
+
+  console.log(`[Extract] Found ${allAnnotations.length} unique annotations`);
 
   // oEmbedで補完（JSONから取得できなかったPostのみ）
   const existingIds = new Set(posts.map((p) => p.id));
@@ -269,7 +290,10 @@ async function extractPostsFromResponse(
     }
   }
 
-  return posts.slice(0, 10);
+  return {
+    posts: posts.slice(0, 10),
+    annotations: allAnnotations
+  };
 }
 
 async function enrichWithOembed(

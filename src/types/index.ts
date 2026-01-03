@@ -248,10 +248,17 @@ export type ProgramStyle = 'comprehensive' | 'talkshow' | 'news';
 // API レスポンス
 // ========================================
 
+// 関連投稿（annotations から取得）
+export interface RelatedPost {
+  url: string;
+  statusId: string;
+}
+
 // API レスポンス
 export interface CollectBuzzPostsResponse {
   posts: BuzzPost[];
   genre: Genre;
+  annotations?: RelatedPost[];  // Grok が参照した投稿URL
 }
 
 export interface GenerateScriptResponse {

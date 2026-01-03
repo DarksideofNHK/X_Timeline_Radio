@@ -5,6 +5,7 @@ import { Player } from './components/Player';
 import { SegmentList } from './components/SegmentList';
 import { PostList, Playlist } from './components/Playlist';
 import { SectionIndicator } from './components/SectionIndicator';
+import { RelatedPosts } from './components/RelatedPosts';
 import { formatScriptDate } from './lib/scriptStorage';
 import type { ProgramMode } from './types';
 
@@ -473,6 +474,11 @@ export default function App() {
                       </div>
                     );
                   })}
+                </div>
+
+                {/* 関連投稿（Grokが参照した全投稿） */}
+                <div className="mt-4">
+                  <RelatedPosts />
                 </div>
               </div>
             )}
