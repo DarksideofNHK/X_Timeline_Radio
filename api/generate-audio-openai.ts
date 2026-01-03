@@ -2,8 +2,21 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const OPENAI_TTS_URL = 'https://api.openai.com/v1/audio/speech';
 
-const JAPANESE_INSTRUCTIONS = `日本語で自然に話してください。ラジオDJのように明るく親しみやすいトーンで読み上げてください。
-漢字の読み方は一般的な読み方を使用し、アルファベットや英単語はカタカナ読みで発音してください。`;
+const JAPANESE_INSTRUCTIONS = `日本のラジオ情報番組のDJとして、リスナーに語りかけるように話してください。
+
+【発話スタイル】
+明るく親しみやすいトーンで、適度な抑揚をつけて単調にならないように。句読点では自然なポーズを取り、聞きやすいテンポを保つ。重要な情報や数字は少し強調する。
+
+【表現のニュアンス】
+「！」の文は少し元気よく。「？」の文は語尾を軽く上げる。「…」や「、、」は少し長めの間を取る。新しいトピックに移る際はわずかにトーンを変えて場面転換を表現する。
+
+【ポーズと呼吸】
+文の区切りでは自然な息継ぎを入れる。長い文は意味のまとまりで区切って読む。全角スペース「　」がある箇所では、話題の転換として少し長めの間を取る。
+
+【読み方】
+英語・アルファベットはカタカナ読み。人名・固有名詞は丁寧に、はっきりと発音。
+
+ロボット的な単調読み上げは避け、実際のラジオ番組のような生き生きとした発話を心がけてください。`;
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
