@@ -184,10 +184,7 @@ export default function App() {
             {hasApiKeys && (
               <div className="bg-gradient-to-r from-purple-900/50 to-blue-900/50 border border-purple-500/50 rounded-lg p-6 text-center">
                 <div className="text-4xl mb-3">🎙️</div>
-                <h2 className="text-xl font-bold mb-2">準備完了！</h2>
-                <p className="text-slate-300 mb-4">
-                  Xのバズ投稿を集めて、{isAIMode ? 'AIが番組スクリプトを生成' : 'ラジオ風に読み上げ'}ます
-                </p>
+                <h2 className="text-xl font-bold mb-4">準備完了！</h2>
                 <button
                   onClick={() => {
                     setSettingsConfirmed(true);
