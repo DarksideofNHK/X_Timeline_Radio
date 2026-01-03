@@ -32,8 +32,11 @@ export default function App() {
   const setAudioSettings = useStore((state) => state.setAudioSettings);
   const stopPlayback = useStore((state) => state.stopPlayback);
   const reset = useStore((state) => state.reset);
+  const refreshProgram = useStore((state) => state.refreshProgram);
+  const collectedPosts = useStore((state) => state.collectedPosts);
 
   const [showPlaylist, setShowPlaylist] = useState(false);
+  const [showPosts, setShowPosts] = useState(false);  // AI番組モードでX投稿を表示
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
 
   const isAIMode = audioSettings.programMode === 'ai-script';
@@ -127,22 +130,46 @@ export default function App() {
                   </button>
                 </div>
               )}
-              {hasProgramContent && !isAIMode && (
+              {/* X投稿確認ボタン（両モード共通） */}
+              {hasProgramContent && (
                 <button
-                  onClick={() => setShowPlaylist(!showPlaylist)}
+                  onClick={() => {
+                    if (isAIMode) {
+                      setShowPosts(!showPosts);
+                    } else {
+                      setShowPlaylist(!showPlaylist);
+                    }
+                  }}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    showPlaylist
+                    (isAIMode ? showPosts : showPlaylist)
                       ? 'bg-accent text-white'
                       : 'bg-bg-menu text-text-secondary hover:bg-hover-bg border border-border-light'
                   }`}
                 >
-                  📋 プレイリスト
+                  📋 X投稿
                 </button>
               )}
+              {/* X情報再取得ボタン */}
+              {hasProgramContent && (
+                <button
+                  onClick={() => {
+                    if (confirm('X投稿を再収集して番組を再生成しますか？')) {
+                      setShowPlaylist(false);
+                      setShowPosts(false);
+                      refreshProgram();
+                    }
+                  }}
+                  className="px-3 py-1.5 bg-bg-menu hover:bg-hover-bg rounded-lg text-sm font-medium text-text-secondary border border-border-light transition-colors"
+                >
+                  🔄 X情報再取得
+                </button>
+              )}
+              {/* リセットボタン */}
               {hasProgramContent && (
                 <button
                   onClick={() => {
                     setShowPlaylist(false);
+                    setShowPosts(false);
                     reset();
                   }}
                   className="px-3 py-1.5 bg-bg-menu hover:bg-hover-bg rounded-lg text-sm font-medium text-text-secondary border border-border-light transition-colors"
@@ -375,6 +402,66 @@ export default function App() {
           <>
             {/* AIモード: セクションインジケーター */}
             {isAIMode && aiProgram && <SectionIndicator />}
+
+            {/* AIモード: X投稿一覧（showPostsがtrueの時） */}
+            {isAIMode && showPosts && collectedPosts && (
+              <div className="bg-bg-card rounded-xl p-4 border border-border-light shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-bold flex items-center gap-2 text-text-primary">
+                    <span>📋</span>
+                    収集したX投稿
+                  </h3>
+                  <button
+                    onClick={() => setShowPosts(false)}
+                    className="text-text-secondary hover:text-text-primary text-xl"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+                  {Object.entries(collectedPosts).map(([genre, posts]) => {
+                    const genreInfo: Record<string, { name: string; icon: string }> = {
+                      trending: { name: '今バズってる話題', icon: '🔥' },
+                      politics: { name: '政治ニュース', icon: '🏛️' },
+                      economy: { name: '経済・マネー', icon: '💹' },
+                      lifestyle: { name: '暮らし・生活', icon: '🏠' },
+                      entertainment: { name: 'エンタメ', icon: '🎬' },
+                      science: { name: '科学・テクノロジー', icon: '🔬' },
+                      international: { name: '国際ニュース', icon: '🌍' },
+                    };
+                    const info = genreInfo[genre] || { name: genre, icon: '📰' };
+                    if (!posts || posts.length === 0) return null;
+                    return (
+                      <div key={genre}>
+                        <h4 className="font-medium text-text-primary mb-2 flex items-center gap-2">
+                          <span>{info.icon}</span>
+                          {info.name}
+                          <span className="text-text-secondary text-sm">({posts.length}件)</span>
+                        </h4>
+                        <div className="space-y-2 pl-4 border-l-2 border-border-light">
+                          {posts.map((post: any, idx: number) => (
+                            <div key={idx} className="bg-bg-menu rounded-lg p-3 border border-border-light">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-medium text-sm text-accent">
+                                  @{post.author?.username}
+                                </span>
+                                <span className="text-text-disabled text-xs">
+                                  {post.metrics?.likes > 0 && `♥${post.metrics.likes.toLocaleString()}`}
+                                  {post.metrics?.retweets > 0 && ` 🔄${post.metrics.retweets.toLocaleString()}`}
+                                </span>
+                              </div>
+                              <p className="text-sm text-text-primary line-clamp-3">
+                                {post.text}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* シンプルモード: プレイリスト */}
             {!isAIMode && showPlaylist && (
