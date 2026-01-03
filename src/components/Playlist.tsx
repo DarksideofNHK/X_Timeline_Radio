@@ -29,7 +29,7 @@ export function PostList() {
         <span className="font-bold text-text-primary">{genreInfo.name}</span>
         <span className="text-text-secondary text-sm">({segment.posts.length}件)</span>
         {isPlaying && (
-          <span className="ml-auto text-green-600 text-sm font-medium animate-pulse">▶ 再生中</span>
+          <span className="ml-auto text-accent text-sm font-medium animate-pulse">▶ 再生中</span>
         )}
       </div>
 
@@ -166,7 +166,7 @@ export function Playlist({ onClose }: PlaylistProps) {
                 <span className="font-bold text-text-primary">{genreInfo.name}</span>
                 <span className="text-text-secondary text-sm">({segment.posts.length}件)</span>
                 {isCurrentSegment && isPlaying && (
-                  <span className="ml-auto text-green-600 text-sm font-medium animate-pulse">▶ 再生中</span>
+                  <span className="ml-auto text-accent text-sm font-medium animate-pulse">▶ 再生中</span>
                 )}
               </div>
 
@@ -182,7 +182,7 @@ export function Playlist({ onClose }: PlaylistProps) {
                       key={post.id}
                       className={`px-4 py-3 flex items-start gap-3 cursor-pointer transition-colors ${
                         isCurrentPost
-                          ? 'bg-green-50'
+                          ? 'bg-accent/20 border-l-4 border-accent'
                           : isPastPost
                             ? 'bg-bg-menu/50 opacity-60'
                             : 'hover:bg-bg-menu'
@@ -192,7 +192,7 @@ export function Playlist({ onClose }: PlaylistProps) {
                       {/* 番号 */}
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
                         isCurrentPost
-                          ? 'bg-green-600 text-white'
+                          ? 'bg-accent text-white'
                           : isPastPost
                             ? 'bg-bg-menu text-text-secondary'
                             : 'bg-bg-menu text-text-primary'
@@ -213,7 +213,7 @@ export function Playlist({ onClose }: PlaylistProps) {
                             @{post.author.username}
                           </a>
                           {isCurrentPost && isPlaying && (
-                            <span className="text-green-600 text-xs">▶</span>
+                            <span className="text-accent text-xs">▶</span>
                           )}
                         </div>
                         <p className="text-sm text-text-primary line-clamp-2">{post.text}</p>
@@ -237,7 +237,7 @@ export function Playlist({ onClose }: PlaylistProps) {
                       <button
                         className={`px-3 py-1 rounded text-xs ${
                           isCurrentPost
-                            ? 'bg-green-600 text-white'
+                            ? 'bg-accent text-white'
                             : 'bg-bg-menu hover:bg-hover-bg text-text-secondary border border-border-light'
                         }`}
                         onClick={(e) => {
