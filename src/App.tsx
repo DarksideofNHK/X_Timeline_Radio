@@ -494,6 +494,9 @@ export default function App() {
             {/* シンプルモード: セグメントリスト */}
             {!isAIMode && <SegmentList />}
 
+            {/* シンプルモード: 関連投稿 */}
+            {!isAIMode && hasProgramContent && <RelatedPosts />}
+
             {/* AIモード: セクション一覧（スクリプト内容表示） */}
             {isAIMode && aiProgram && aiProgram.sections && (
               <div className="bg-bg-card rounded-xl p-4 border border-border-light shadow-sm">
