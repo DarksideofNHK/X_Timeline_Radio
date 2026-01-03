@@ -153,7 +153,7 @@ export default function App() {
               {hasProgramContent && (
                 <button
                   onClick={() => {
-                    if (confirm('X投稿を再収集して番組を再生成しますか？')) {
+                    if (confirm('キャッシュをクリアして再度情報を取得します。よろしいですか？')) {
                       setShowPlaylist(false);
                       setShowPosts(false);
                       refreshProgram();
