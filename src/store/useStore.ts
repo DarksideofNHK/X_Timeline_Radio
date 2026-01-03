@@ -72,6 +72,24 @@ function removeUrls(text: string): string {
     .trim();
 }
 
+// TTSに渡す前にテキストを整形（不要なスペースを除去）
+function cleanTextForTTS(text: string): string {
+  return text
+    // 「ユーザー名 さん」→「ユーザー名さん」（敬称前のスペース除去）
+    .replace(/\s+さん/g, 'さん')
+    // 「ユーザー名 さまへ」→「ユーザー名さまへ」
+    .replace(/\s+さま/g, 'さま')
+    // 「ユーザー名 氏」→「ユーザー名氏」
+    .replace(/\s+氏/g, '氏')
+    // 句読点前のスペース除去
+    .replace(/\s+([。、！？])/g, '$1')
+    // 句読点後のスペースを正規化（1つだけ）
+    .replace(/([。、！？])\s+/g, '$1')
+    // 連続するスペースを1つに
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
 // 投稿からスクリプトを生成
 function generatePostScript(post: BuzzPost, index: number, total: number): string {
   const cleanText = removeUrls(post.text);
@@ -124,15 +142,19 @@ async function generateAudioUrl(
   ttsConfig: TtsConfig
 ): Promise<string> {
   const { openaiApiKey, openaiVoiceId } = ttsConfig;
+
+  // TTSに渡す前にテキストを整形（不要なスペースを除去）
+  const cleanedScript = cleanTextForTTS(script);
+
   const cacheKey = `openai:${openaiVoiceId}`;
 
-  // キャッシュをチェック
-  const cached = await audioCache.get(script, cacheKey);
+  // キャッシュをチェック（整形後のテキストでチェック）
+  const cached = await audioCache.get(cleanedScript, cacheKey);
   if (cached) {
     return cached;
   }
 
-  console.log(`[TTS:OpenAI] Generating audio (voice: ${openaiVoiceId}): "${script.substring(0, 30)}..."`);
+  console.log(`[TTS:OpenAI] Generating audio (voice: ${openaiVoiceId}): "${cleanedScript.substring(0, 30)}..."`);
 
   let lastError: Error | null = null;
 
@@ -144,7 +166,7 @@ async function generateAudioUrl(
       const response = await fetch('/api/generate-audio-openai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ script, apiKey: openaiApiKey, voice: openaiVoiceId }),
+        body: JSON.stringify({ script: cleanedScript, apiKey: openaiApiKey, voice: openaiVoiceId }),
       });
 
       if (response.ok) {
@@ -154,8 +176,8 @@ async function generateAudioUrl(
           { type: mimeType }
         );
 
-        // キャッシュに保存
-        return audioCache.set(script, cacheKey, audioBlob);
+        // キャッシュに保存（整形後のテキストで保存）
+        return audioCache.set(cleanedScript, cacheKey, audioBlob);
       }
 
       // エラーレスポンスの処理

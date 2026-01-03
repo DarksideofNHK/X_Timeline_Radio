@@ -6,7 +6,7 @@ import { SPEED_OPTIONS, OPENAI_VOICE_OPTIONS, type ProgramMode } from '../types'
 
 export function Settings() {
   const { apiConfig, setApiConfig, audioSettings, setAudioSettings, clearCache } = useStore();
-  const [bgmEnabled, setBgmEnabled] = useState(false);
+  const [bgmEnabled, setBgmEnabled] = useState(true);
   const [bgmSource, setBgmSource] = useState<BgmSource>('default');
   const [tracks, setTracks] = useState<BgmTrack[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -82,11 +82,11 @@ export function Settings() {
   };
 
   return (
-    <div className="bg-slate-800 rounded-lg p-6 space-y-4">
-      <h2 className="text-lg font-bold">API設定</h2>
+    <div className="bg-bg-card rounded-xl p-6 space-y-4 border border-border-light shadow-sm">
+      <h2 className="text-lg font-bold text-text-primary">API設定</h2>
 
       <div>
-        <label className="block text-sm text-slate-400 mb-1">
+        <label className="block text-sm text-text-secondary mb-1">
           Grok API Key
         </label>
         <input
@@ -94,14 +94,14 @@ export function Settings() {
           value={apiConfig.grokApiKey}
           onChange={(e) => setApiConfig({ grokApiKey: e.target.value })}
           placeholder="xai-..."
-          className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 focus:outline-none focus:border-blue-500"
+          className="w-full bg-bg-menu border border-border-light rounded-lg px-3 py-2 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent text-text-primary"
         />
-        <p className="text-xs text-slate-500 mt-1">
+        <p className="text-xs text-text-disabled mt-1">
           <a
             href="https://x.ai/api"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-blue-400 hover:underline"
+            className="text-accent hover:underline"
           >
             x.ai/api
           </a>
@@ -110,7 +110,7 @@ export function Settings() {
       </div>
 
       <div>
-        <label className="block text-sm text-slate-400 mb-1">
+        <label className="block text-sm text-text-secondary mb-1">
           Gemini API Key（スクリプト生成 / TTS）
         </label>
         <input
@@ -118,14 +118,14 @@ export function Settings() {
           value={apiConfig.geminiApiKey}
           onChange={(e) => setApiConfig({ geminiApiKey: e.target.value })}
           placeholder="AIzaSy..."
-          className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 focus:outline-none focus:border-blue-500"
+          className="w-full bg-bg-menu border border-border-light rounded-lg px-3 py-2 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent text-text-primary"
         />
-        <p className="text-xs text-slate-500 mt-1">
+        <p className="text-xs text-text-disabled mt-1">
           <a
             href="https://aistudio.google.com/apikey"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-blue-400 hover:underline"
+            className="text-accent hover:underline"
           >
             Google AI Studio
           </a>
@@ -134,7 +134,7 @@ export function Settings() {
       </div>
 
       <div>
-        <label className="block text-sm text-slate-400 mb-1">
+        <label className="block text-sm text-text-secondary mb-1">
           OpenAI API Key（TTS用・おすすめ）
         </label>
         <input
@@ -142,14 +142,14 @@ export function Settings() {
           value={apiConfig.openaiApiKey}
           onChange={(e) => setApiConfig({ openaiApiKey: e.target.value })}
           placeholder="sk-..."
-          className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 focus:outline-none focus:border-blue-500"
+          className="w-full bg-bg-menu border border-border-light rounded-lg px-3 py-2 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent text-text-primary"
         />
-        <p className="text-xs text-slate-500 mt-1">
+        <p className="text-xs text-text-disabled mt-1">
           <a
             href="https://platform.openai.com/api-keys"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-blue-400 hover:underline"
+            className="text-accent hover:underline"
           >
             OpenAI Platform
           </a>
@@ -157,15 +157,15 @@ export function Settings() {
         </p>
       </div>
 
-      <div className="pt-4 border-t border-slate-700">
-        <h3 className="text-sm font-bold text-slate-400 mb-3">番組モード</h3>
+      <div className="pt-4 border-t border-border-light">
+        <h3 className="text-sm font-bold text-text-secondary mb-3">番組モード</h3>
         <div className="flex gap-2 mb-2">
           <button
             onClick={() => setAudioSettings({ programMode: 'simple' as ProgramMode })}
-            className={`flex-1 px-3 py-3 rounded text-sm ${
+            className={`flex-1 px-3 py-3 rounded-lg text-sm transition-colors ${
               audioSettings.programMode === 'simple'
-                ? 'bg-blue-600 text-white'
-                : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                ? 'bg-accent text-white'
+                : 'bg-bg-menu text-text-secondary hover:bg-gray-200 border border-border-light'
             }`}
           >
             <div className="font-bold">📻 シンプルモード</div>
@@ -173,10 +173,10 @@ export function Settings() {
           </button>
           <button
             onClick={() => setAudioSettings({ programMode: 'ai-script' as ProgramMode })}
-            className={`flex-1 px-3 py-3 rounded text-sm ${
+            className={`flex-1 px-3 py-3 rounded-lg text-sm transition-colors ${
               audioSettings.programMode === 'ai-script'
                 ? 'bg-purple-600 text-white'
-                : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                : 'bg-bg-menu text-text-secondary hover:bg-gray-200 border border-border-light'
             }`}
           >
             <div className="font-bold">🎙️ AI番組モード</div>
@@ -185,29 +185,29 @@ export function Settings() {
         </div>
         {audioSettings.programMode === 'ai-script' && (
           apiConfig.geminiApiKey ? (
-            <p className="text-xs text-green-400 mb-2">
+            <p className="text-xs text-green-600 mb-2">
               ✅ Gemini APIキーが設定されています
             </p>
           ) : (
-            <p className="text-xs text-yellow-500 mb-2">
+            <p className="text-xs text-yellow-600 mb-2">
               ⚠️ AI番組モードにはGemini APIキーの入力が必要です
             </p>
           )
         )}
       </div>
 
-      <div className="pt-4 border-t border-slate-700">
-        <h3 className="text-sm font-bold text-slate-400 mb-3">読み上げ設定（OpenAI TTS）</h3>
+      <div className="pt-4 border-t border-border-light">
+        <h3 className="text-sm font-bold text-text-secondary mb-3">読み上げ設定（OpenAI TTS）</h3>
 
         {/* 声の選択 */}
         <div className="mb-4">
-          <label className="block text-sm text-slate-400 mb-1">
+          <label className="block text-sm text-text-secondary mb-1">
             読み手の声
           </label>
           <select
             value={audioSettings.openaiVoiceId}
             onChange={(e) => setAudioSettings({ openaiVoiceId: e.target.value as any })}
-            className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 focus:outline-none focus:border-blue-500"
+            className="w-full bg-bg-menu border border-border-light rounded-lg px-3 py-2 focus:outline-none focus:border-accent text-text-primary"
           >
             {OPENAI_VOICE_OPTIONS.map((voice) => (
               <option key={voice.id} value={voice.id}>
@@ -219,13 +219,13 @@ export function Settings() {
 
         {/* 再生速度 */}
         <div className="mb-4">
-          <label className="block text-sm text-slate-400 mb-1">
+          <label className="block text-sm text-text-secondary mb-1">
             再生速度
           </label>
           <select
             value={audioSettings.speed}
             onChange={(e) => setAudioSettings({ speed: parseFloat(e.target.value) })}
-            className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 focus:outline-none focus:border-blue-500"
+            className="w-full bg-bg-menu border border-border-light rounded-lg px-3 py-2 focus:outline-none focus:border-accent text-text-primary"
           >
             {SPEED_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -235,22 +235,22 @@ export function Settings() {
           </select>
         </div>
 
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-text-disabled">
           設定は次の投稿から反映されます。
         </p>
       </div>
 
-      <div className="pt-4 border-t border-slate-700">
-        <h3 className="text-sm font-bold text-slate-400 mb-3">BGM設定</h3>
+      <div className="pt-4 border-t border-border-light">
+        <h3 className="text-sm font-bold text-text-secondary mb-3">BGM設定</h3>
 
         {/* BGM ON/OFF */}
         <div className="flex items-center gap-3 mb-4">
           <button
             onClick={handleBgmToggle}
-            className={`px-4 py-2 rounded text-sm ${
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               bgmEnabled
-                ? 'bg-green-600 hover:bg-green-500'
-                : 'bg-slate-700 hover:bg-slate-600'
+                ? 'bg-green-600 hover:bg-green-500 text-white'
+                : 'bg-bg-menu hover:bg-gray-200 text-text-secondary border border-border-light'
             }`}
           >
             {bgmEnabled ? '🔊 BGM ON' : '🔇 BGM OFF'}
@@ -261,20 +261,20 @@ export function Settings() {
         <div className="flex gap-2 mb-4">
           <button
             onClick={() => handleBgmSourceChange('default')}
-            className={`flex-1 px-3 py-2 rounded text-sm ${
+            className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
               bgmSource === 'default'
-                ? 'bg-blue-600 text-white'
-                : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                ? 'bg-accent text-white'
+                : 'bg-bg-menu text-text-secondary hover:bg-gray-200 border border-border-light'
             }`}
           >
             🎵 デフォルトBGM
           </button>
           <button
             onClick={() => handleBgmSourceChange('uploaded')}
-            className={`flex-1 px-3 py-2 rounded text-sm ${
+            className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
               bgmSource === 'uploaded'
-                ? 'bg-blue-600 text-white'
-                : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                ? 'bg-accent text-white'
+                : 'bg-bg-menu text-text-secondary hover:bg-gray-200 border border-border-light'
             }`}
           >
             📁 カスタムBGM
@@ -283,9 +283,9 @@ export function Settings() {
 
         {/* デフォルトBGM情報 */}
         {bgmSource === 'default' && (
-          <div className="bg-slate-700/50 rounded px-3 py-2 mb-3">
-            <p className="text-sm text-slate-300">🎵 Digital Newsfeed Groove</p>
-            <p className="text-xs text-slate-500">Elevenlabs生成</p>
+          <div className="bg-bg-menu rounded-lg px-3 py-2 mb-3 border border-border-light">
+            <p className="text-sm text-text-primary">🎵 Digital Newsfeed Groove</p>
+            <p className="text-xs text-text-disabled">Elevenlabs生成</p>
           </div>
         )}
 
@@ -293,10 +293,10 @@ export function Settings() {
         {bgmSource === 'uploaded' && (
           <>
             <div className="mb-3">
-              <label className={`inline-block px-4 py-2 rounded text-sm cursor-pointer ${
+              <label className={`inline-block px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors ${
                 tracks.length >= 5
-                  ? 'bg-slate-600 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-500'
+                  ? 'bg-gray-200 cursor-not-allowed text-text-disabled'
+                  : 'bg-accent hover:bg-accent-hover text-white'
               }`}>
                 {uploading ? '⏳ アップロード中...' : '📁 ファイル追加'}
                 <input
@@ -309,12 +309,12 @@ export function Settings() {
                   className="hidden"
                 />
               </label>
-              <span className="text-xs text-slate-500 ml-2">最大5曲</span>
+              <span className="text-xs text-text-disabled ml-2">最大5曲</span>
             </div>
 
             {/* トラック一覧 */}
             {tracks.length === 0 ? (
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-text-disabled">
                 MP3ファイルをアップロードしてください
               </p>
             ) : (
@@ -322,14 +322,14 @@ export function Settings() {
                 {tracks.map((track, index) => (
                   <div
                     key={track.id}
-                    className="flex items-center justify-between bg-slate-700 rounded px-3 py-2"
+                    className="flex items-center justify-between bg-bg-menu rounded-lg px-3 py-2 border border-border-light"
                   >
-                    <span className="text-sm truncate flex-1">
+                    <span className="text-sm truncate flex-1 text-text-primary">
                       {index + 1}. {track.name}
                     </span>
                     <button
                       onClick={() => handleRemoveTrack(track.id)}
-                      className="text-red-400 hover:text-red-300 ml-2 text-sm"
+                      className="text-red-500 hover:text-red-600 ml-2 text-sm"
                     >
                       ✕
                     </button>
@@ -340,19 +340,19 @@ export function Settings() {
           </>
         )}
 
-        <p className="text-xs text-slate-500 mt-3">
+        <p className="text-xs text-text-disabled mt-3">
           TTS再生中は自動的に音量が下がります。
         </p>
       </div>
 
-      <div className="pt-4 border-t border-slate-700">
-        <h3 className="text-sm font-bold text-slate-400 mb-2">キャッシュ管理</h3>
-        <p className="text-xs text-slate-500 mb-2">
+      <div className="pt-4 border-t border-border-light">
+        <h3 className="text-sm font-bold text-text-secondary mb-2">キャッシュ管理</h3>
+        <p className="text-xs text-text-disabled mb-2">
           投稿データは30分間キャッシュされます。
         </p>
         <button
           onClick={handleClearCache}
-          className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded text-sm"
+          className="px-4 py-2 bg-bg-menu hover:bg-gray-200 rounded-lg text-sm font-medium text-text-secondary border border-border-light transition-colors"
         >
           キャッシュをクリア
         </button>

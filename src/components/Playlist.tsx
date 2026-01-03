@@ -22,19 +22,19 @@ export function PostList() {
   const genreInfo = GENRE_INFO[segment.genre] || { name: segment.genre, icon: '📰' };
 
   return (
-    <div className="bg-slate-800 rounded-lg overflow-hidden">
+    <div className="bg-bg-card rounded-xl overflow-hidden border border-border-light shadow-sm">
       {/* セグメントヘッダー */}
-      <div className="px-4 py-3 bg-slate-700/50 flex items-center gap-2">
+      <div className="px-4 py-3 bg-bg-menu flex items-center gap-2">
         <span className="text-lg">{genreInfo.icon}</span>
-        <span className="font-bold">{genreInfo.name}</span>
-        <span className="text-slate-400 text-sm">({segment.posts.length}件)</span>
+        <span className="font-bold text-text-primary">{genreInfo.name}</span>
+        <span className="text-text-secondary text-sm">({segment.posts.length}件)</span>
         {isPlaying && (
-          <span className="ml-auto text-green-400 text-sm animate-pulse">▶ 再生中</span>
+          <span className="ml-auto text-green-600 text-sm font-medium animate-pulse">▶ 再生中</span>
         )}
       </div>
 
       {/* 投稿リスト */}
-      <div className="divide-y divide-slate-700/50 max-h-[50vh] overflow-y-auto">
+      <div className="divide-y divide-border-light max-h-[50vh] overflow-y-auto">
         {segment.posts.map((post, postIdx) => {
           const isCurrentPost = postIdx === currentPostIndex;
           const isPastPost = postIdx < currentPostIndex;
@@ -44,20 +44,20 @@ export function PostList() {
               key={post.id}
               className={`px-4 py-3 flex items-start gap-3 cursor-pointer transition-all ${
                 isCurrentPost
-                  ? 'bg-blue-900/50 border-l-4 border-blue-500'
+                  ? 'bg-accent/10 border-l-4 border-accent'
                   : isPastPost
-                    ? 'bg-slate-800/50 opacity-60'
-                    : 'hover:bg-slate-700/30'
+                    ? 'bg-bg-menu/50 opacity-60'
+                    : 'hover:bg-bg-menu'
               }`}
               onClick={() => playFromPosition(currentSegmentIndex, postIdx)}
             >
               {/* 番号 */}
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
                 isCurrentPost
-                  ? 'bg-blue-600'
+                  ? 'bg-accent text-white'
                   : isPastPost
-                    ? 'bg-slate-600'
-                    : 'bg-slate-700'
+                    ? 'bg-bg-menu text-text-secondary'
+                    : 'bg-bg-menu text-text-primary'
               }`}>
                 {postIdx + 1}
               </div>
@@ -69,22 +69,22 @@ export function PostList() {
                     href={post.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="font-bold text-blue-400 hover:underline"
+                    className="font-bold text-accent hover:underline"
                     onClick={(e) => e.stopPropagation()}
                   >
                     @{post.author.username}
                   </a>
                   {post.author.name !== post.author.username && (
-                    <span className="text-slate-400 text-sm truncate">
+                    <span className="text-text-secondary text-sm truncate">
                       ({post.author.name})
                     </span>
                   )}
                   {isCurrentPost && isPlaying && (
-                    <span className="text-blue-400 text-xs animate-pulse">♪</span>
+                    <span className="text-accent text-xs animate-pulse">♪</span>
                   )}
                 </div>
-                <p className="text-slate-200 break-words">{post.text}</p>
-                <div className="flex items-center gap-3 mt-2 text-sm text-slate-400">
+                <p className="text-text-primary break-words">{post.text}</p>
+                <div className="flex items-center gap-3 mt-2 text-sm text-text-secondary">
                   {post.metrics.likes > 0 && (
                     <span>❤️ {formatNumber(post.metrics.likes)}</span>
                   )}
@@ -98,14 +98,14 @@ export function PostList() {
                     href={post.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-400 hover:underline ml-auto text-xs"
+                    className="text-accent hover:underline ml-auto text-xs"
                     onClick={(e) => e.stopPropagation()}
                   >
                     🔗 元投稿
                   </a>
                 </div>
                 {post.buzzReason && (
-                  <p className="text-xs text-yellow-500 mt-1">
+                  <p className="text-xs text-yellow-600 mt-1">
                     🔥 {post.buzzReason}
                   </p>
                 )}
@@ -128,12 +128,12 @@ export function Playlist({ onClose }: PlaylistProps) {
 
   if (!program || program.segments.length === 0) {
     return (
-      <div className="bg-slate-800 rounded-lg p-6">
+      <div className="bg-bg-card rounded-xl p-6 border border-border-light shadow-lg">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-bold">📋 全プレイリスト</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-white">✕</button>
+          <h2 className="text-lg font-bold text-text-primary">📋 全プレイリスト</h2>
+          <button onClick={onClose} className="text-text-secondary hover:text-text-primary">✕</button>
         </div>
-        <p className="text-slate-400 text-sm">番組を開始すると、ここにプレイリストが表示されます。</p>
+        <p className="text-text-secondary text-sm">番組を開始すると、ここにプレイリストが表示されます。</p>
       </div>
     );
   }
@@ -142,12 +142,12 @@ export function Playlist({ onClose }: PlaylistProps) {
   const totalPosts = program.segments.reduce((sum, seg) => sum + seg.posts.length, 0);
 
   return (
-    <div className="bg-slate-800 rounded-lg p-6 max-h-[70vh] overflow-hidden flex flex-col">
+    <div className="bg-bg-card rounded-xl p-6 max-h-[70vh] overflow-hidden flex flex-col border border-border-light shadow-lg">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-bold">📋 全プレイリスト</h2>
+        <h2 className="text-lg font-bold text-text-primary">📋 全プレイリスト</h2>
         <div className="flex items-center gap-4">
-          <span className="text-sm text-slate-400">全{totalPosts}件</span>
-          <button onClick={onClose} className="text-slate-400 hover:text-white text-xl">✕</button>
+          <span className="text-sm text-text-secondary">全{totalPosts}件</span>
+          <button onClick={onClose} className="text-text-secondary hover:text-text-primary text-xl">✕</button>
         </div>
       </div>
 
@@ -157,21 +157,21 @@ export function Playlist({ onClose }: PlaylistProps) {
           const isCurrentSegment = segIdx === currentSegmentIndex;
 
           return (
-            <div key={segment.id} className="border border-slate-700 rounded-lg overflow-hidden">
+            <div key={segment.id} className="border border-border-light rounded-lg overflow-hidden">
               {/* セグメントヘッダー */}
               <div className={`px-4 py-2 flex items-center gap-2 ${
-                isCurrentSegment ? 'bg-blue-900/50' : 'bg-slate-700/50'
+                isCurrentSegment ? 'bg-accent/10' : 'bg-bg-menu'
               }`}>
                 <span className="text-lg">{genreInfo.icon}</span>
-                <span className="font-bold">{genreInfo.name}</span>
-                <span className="text-slate-400 text-sm">({segment.posts.length}件)</span>
+                <span className="font-bold text-text-primary">{genreInfo.name}</span>
+                <span className="text-text-secondary text-sm">({segment.posts.length}件)</span>
                 {isCurrentSegment && isPlaying && (
-                  <span className="ml-auto text-green-400 text-sm animate-pulse">▶ 再生中</span>
+                  <span className="ml-auto text-green-600 text-sm font-medium animate-pulse">▶ 再生中</span>
                 )}
               </div>
 
               {/* 投稿リスト */}
-              <div className="divide-y divide-slate-700/50">
+              <div className="divide-y divide-border-light">
                 {segment.posts.map((post, postIdx) => {
                   const isCurrentPost = isCurrentSegment && postIdx === currentPostIndex;
                   const isPastPost = segIdx < currentSegmentIndex ||
@@ -182,20 +182,20 @@ export function Playlist({ onClose }: PlaylistProps) {
                       key={post.id}
                       className={`px-4 py-3 flex items-start gap-3 cursor-pointer transition-colors ${
                         isCurrentPost
-                          ? 'bg-green-900/30'
+                          ? 'bg-green-50'
                           : isPastPost
-                            ? 'bg-slate-800/50 opacity-60'
-                            : 'hover:bg-slate-700/30'
+                            ? 'bg-bg-menu/50 opacity-60'
+                            : 'hover:bg-bg-menu'
                       }`}
                       onClick={() => playFromPosition(segIdx, postIdx)}
                     >
                       {/* 番号 */}
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
                         isCurrentPost
-                          ? 'bg-green-600'
+                          ? 'bg-green-600 text-white'
                           : isPastPost
-                            ? 'bg-slate-600'
-                            : 'bg-slate-700'
+                            ? 'bg-bg-menu text-text-secondary'
+                            : 'bg-bg-menu text-text-primary'
                       }`}>
                         {postIdx + 1}
                       </div>
@@ -207,17 +207,17 @@ export function Playlist({ onClose }: PlaylistProps) {
                             href={post.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="font-bold text-sm truncate text-blue-400 hover:underline"
+                            className="font-bold text-sm truncate text-accent hover:underline"
                             onClick={(e) => e.stopPropagation()}
                           >
                             @{post.author.username}
                           </a>
                           {isCurrentPost && isPlaying && (
-                            <span className="text-green-400 text-xs">▶</span>
+                            <span className="text-green-600 text-xs">▶</span>
                           )}
                         </div>
-                        <p className="text-sm text-slate-300 line-clamp-2">{post.text}</p>
-                        <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
+                        <p className="text-sm text-text-primary line-clamp-2">{post.text}</p>
+                        <div className="flex items-center gap-3 mt-1 text-xs text-text-disabled">
                           <span>❤️ {formatNumber(post.metrics.likes)}</span>
                           <span>🔄 {formatNumber(post.metrics.retweets)}</span>
                           <span>💬 {formatNumber(post.metrics.replies)}</span>
@@ -225,7 +225,7 @@ export function Playlist({ onClose }: PlaylistProps) {
                             href={post.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-blue-400 hover:underline ml-auto"
+                            className="text-accent hover:underline ml-auto"
                             onClick={(e) => e.stopPropagation()}
                           >
                             🔗 元投稿
@@ -238,7 +238,7 @@ export function Playlist({ onClose }: PlaylistProps) {
                         className={`px-3 py-1 rounded text-xs ${
                           isCurrentPost
                             ? 'bg-green-600 text-white'
-                            : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
+                            : 'bg-bg-menu hover:bg-gray-200 text-text-secondary border border-border-light'
                         }`}
                         onClick={(e) => {
                           e.stopPropagation();

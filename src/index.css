@@ -2,10 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* テキストカラー */
+  --color-text-primary: #34322D;
+  --color-text-secondary: #5E5E5B;
+  --color-text-disabled: #B9B9B7;
+
+  /* アクセントカラー */
+  --color-accent: #0081F2;
+  --color-accent-hover: #0070D6;
+
+  /* 背景色 */
+  --color-bg-main: #F8F8F7;
+  --color-bg-card: #FFFFFF;
+  --color-bg-menu: #F0F0EF;
+
+  /* ボーダー */
+  --color-border: #E5E5E3;
+}
+
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-  background-color: #0f172a;
-  color: #f8fafc;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, 'Apple Color Emoji', Arial, sans-serif;
+  background-color: var(--color-bg-main);
+  color: var(--color-text-primary);
 }
 
 /* カスタムスクロールバー */
@@ -14,14 +33,14 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #1e293b;
+  background: var(--color-bg-menu);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #475569;
+  background: #C5C5C3;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
+  background: #A5A5A3;
 }
