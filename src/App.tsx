@@ -177,25 +177,34 @@ export default function App() {
           </div>
         )}
 
-        {/* 初期設定 (設定完了ボタンが押されるまで表示) */}
+        {/* 初期設定 (番組生成開始ボタンが押されるまで表示) */}
         {!settingsConfirmed && (
           <div className="space-y-4">
-            <Settings />
+            {/* 番組生成開始ボタン（APIキーが揃っている時に上部に表示） */}
             {hasApiKeys && (
-              <div className="bg-green-900/30 border border-green-700 rounded-lg p-4 text-center">
-                <p className="text-green-300 mb-3">✅ 必要なAPIキーがすべて設定されました</p>
+              <div className="bg-gradient-to-r from-purple-900/50 to-blue-900/50 border border-purple-500/50 rounded-lg p-6 text-center">
+                <div className="text-4xl mb-3">🎙️</div>
+                <h2 className="text-xl font-bold mb-2">準備完了！</h2>
+                <p className="text-slate-300 mb-4">
+                  Xのバズ投稿を集めて、{isAIMode ? 'AIが番組スクリプトを生成' : 'ラジオ風に読み上げ'}ます
+                </p>
                 <button
-                  onClick={() => setSettingsConfirmed(true)}
-                  className={`px-6 py-3 rounded-lg font-bold text-lg ${
+                  onClick={() => {
+                    setSettingsConfirmed(true);
+                    handleStartProgram();
+                  }}
+                  className={`px-8 py-4 rounded-lg font-bold text-xl ${
                     isAIMode
                       ? 'bg-purple-600 hover:bg-purple-500'
                       : 'bg-blue-600 hover:bg-blue-500'
                   }`}
                 >
-                  設定完了 →
+                  {isAIMode ? '🎙️ AI番組を生成開始' : '📻 番組を生成開始'}
                 </button>
               </div>
             )}
+
+            {/* APIキー未設定の案内 */}
             {!hasApiKeys && (
               <div className="bg-slate-800 rounded-lg p-4 text-center">
                 <p className="text-slate-400">
@@ -205,6 +214,9 @@ export default function App() {
                 </p>
               </div>
             )}
+
+            {/* 設定パネル */}
+            <Settings />
           </div>
         )}
 
