@@ -306,6 +306,7 @@ interface AppState {
   setError: (error: string | null) => void;
   reset: () => void;
   clearCache: () => void;
+  refreshProgram: () => Promise<void>;  // キャッシュクリア後に番組を再生成
 
   // アクション（シンプルモード）
   initializeProgram: () => Promise<void>;
@@ -984,6 +985,38 @@ export const useStore = create<AppState>()(
       // キャッシュクリア
       clearCache: () => {
         clearPostsCache();
+      },
+
+      // 番組を再取得（キャッシュクリア後に再生成）
+      refreshProgram: async () => {
+        const { audioSettings, stopPlayback } = get();
+
+        // 再生を停止
+        stopPlayback();
+
+        // キャッシュをクリア
+        clearPostsCache();
+
+        // 状態をリセット（番組のみ、設定は保持）
+        set({
+          program: null,
+          aiProgram: null,
+          collectedPosts: null,
+          currentSegmentIndex: 0,
+          currentPostIndex: 0,
+          currentSectionIndex: 0,
+          currentChunkIndex: 0,
+          isGeneratingScript: false,
+          currentAudio: null,
+          error: null,
+        });
+
+        // モードに応じて再初期化
+        if (audioSettings.programMode === 'ai-script') {
+          await get().initializeAIProgram();
+        } else {
+          await get().initializeProgram();
+        }
       },
 
       // ========================================
