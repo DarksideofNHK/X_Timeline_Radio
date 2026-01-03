@@ -238,10 +238,13 @@ async function generateAudioUrl(
 // 音声URLを再生（完了を待つ）- BGMダッキング対応・再生速度対応
 // 現在再生中の音声要素（即座に停止するために保持）
 let currentAudioElement: HTMLAudioElement | null = null;
+// ユーザーによる停止かどうかを追跡
+let isStoppingByUser = false;
 
 // 音声を即座に停止する関数
 function stopCurrentAudio() {
   if (currentAudioElement) {
+    isStoppingByUser = true;  // ユーザー停止フラグを立てる
     currentAudioElement.pause();
     currentAudioElement.src = '';
     currentAudioElement = null;
@@ -249,6 +252,9 @@ function stopCurrentAudio() {
 }
 
 async function playAudioUrl(audioUrl: string, speed: number = 1.0): Promise<void> {
+  // ユーザー停止フラグをリセット
+  isStoppingByUser = false;
+
   // TTS再生前にBGMをダッキング
   if (bgmManager.getIsPlaying()) {
     await bgmManager.duck();
@@ -275,10 +281,24 @@ async function playAudioUrl(audioUrl: string, speed: number = 1.0): Promise<void
       audioElement.onerror = () => {
         currentAudioElement = null;
         URL.revokeObjectURL(audioUrl);
-        reject(new Error('Audio playback failed'));
+        // ユーザーによる停止の場合はエラーではなく正常終了として扱う
+        if (isStoppingByUser) {
+          isStoppingByUser = false;
+          resolve();
+        } else {
+          reject(new Error('Audio playback failed'));
+        }
       };
 
-      audioElement.play().catch(reject);
+      audioElement.play().catch((e) => {
+        // ユーザーによる停止の場合はエラーを無視
+        if (isStoppingByUser) {
+          isStoppingByUser = false;
+          resolve();
+        } else {
+          reject(e);
+        }
+      });
     } catch (e) {
       reject(e);
     }
