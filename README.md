@@ -4,8 +4,7 @@ Xで話題の投稿を自動収集し、AIがラジオ番組風のスクリプ�
 
 ## デモ
 
-- **Vercel**: https://x-timeline-radio.vercel.app
-- **Netlify**: https://x-timeline-radio.netlify.app
+https://x-timeline-radio.vercel.app
 
 ## 機能
 
