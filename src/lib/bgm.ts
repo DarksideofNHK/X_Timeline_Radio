@@ -1,9 +1,15 @@
 // BGM管理クラス
-// ユーザーがアップロードしたBGMをランダム再生
+// デフォルトBGMまたはユーザーアップロードBGMを再生
 
 import { bgmStorage } from './bgmStorage';
 
-export type BgmSource = 'none' | 'uploaded';
+export type BgmSource = 'none' | 'default' | 'uploaded';
+
+// デフォルトBGM設定
+const DEFAULT_BGM = {
+  name: 'Digital Newsfeed Groove',
+  path: '/bgm/Digital_Newsfeed_Groove_2026-01-03T112506.mp3',
+};
 
 interface BgmConfig {
   source: BgmSource;
@@ -15,7 +21,7 @@ class BgmManager {
   private currentObjectUrl: string | null = null;
   private isPlaying = false;
   private config: BgmConfig = {
-    source: 'uploaded',
+    source: 'default', // デフォルトBGMをデフォルトに
     volume: 0.15,
   };
 
@@ -34,41 +40,53 @@ class BgmManager {
     if (this.isPlaying) return;
     if (this.config.source === 'none') return;
 
-    console.log('[BGM] Starting...');
+    console.log('[BGM] Starting...', this.config.source);
 
-    // ランダムにトラックを選択
-    const track = await bgmStorage.getRandomTrack();
-    if (!track) {
-      console.log('[BGM] No tracks available');
-      return;
+    let audioSrc: string;
+    let trackName: string;
+
+    if (this.config.source === 'default') {
+      // デフォルトBGMを使用
+      audioSrc = DEFAULT_BGM.path;
+      trackName = DEFAULT_BGM.name;
+    } else {
+      // ユーザーアップロードBGMを使用
+      const track = await bgmStorage.getRandomTrack();
+      if (!track) {
+        console.log('[BGM] No uploaded tracks available, falling back to default');
+        audioSrc = DEFAULT_BGM.path;
+        trackName = DEFAULT_BGM.name;
+      } else {
+        // 前のObjectURLを解放
+        if (this.currentObjectUrl) {
+          URL.revokeObjectURL(this.currentObjectUrl);
+        }
+        this.currentObjectUrl = URL.createObjectURL(track.blob);
+        audioSrc = this.currentObjectUrl;
+        trackName = track.name;
+      }
     }
-
-    // 前のObjectURLを解放
-    if (this.currentObjectUrl) {
-      URL.revokeObjectURL(this.currentObjectUrl);
-    }
-
-    // BlobからURLを作成
-    this.currentObjectUrl = URL.createObjectURL(track.blob);
 
     if (this.audioElement) {
       this.audioElement.pause();
       this.audioElement = null;
     }
 
-    this.audioElement = new Audio(this.currentObjectUrl);
+    this.audioElement = new Audio(audioSrc);
     this.audioElement.loop = true;
     this.audioElement.volume = this.config.volume;
 
-    // 曲が終わったら次のランダム曲へ（ループ無効時用）
+    // 曲が終わったら次のランダム曲へ（アップロード曲の場合のみ）
     this.audioElement.onended = () => {
-      this.playNext();
+      if (this.config.source === 'uploaded') {
+        this.playNext();
+      }
     };
 
     try {
       await this.audioElement.play();
       this.isPlaying = true;
-      console.log(`[BGM] Playing: ${track.name}`);
+      console.log(`[BGM] Playing: ${trackName}`);
     } catch (e) {
       console.error('[BGM] Failed to play:', e);
       this.isPlaying = false;
