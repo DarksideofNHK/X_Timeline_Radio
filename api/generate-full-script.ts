@@ -205,7 +205,13 @@ scriptには演出指示やカッコ書きを含めず、純粋な読み上げ�
       };
     });
 
-    const totalDuration = parsed.totalDuration || 30;
+    // セクションのestimatedDuration（秒）を合計して分に変換
+    const totalSeconds = sections.reduce((sum: number, section: any) => {
+      return sum + (section.estimatedDuration || 180);
+    }, 0);
+    const totalDuration = Math.round(totalSeconds / 60);
+
+    console.log(`[FullScript] Total duration: ${totalSeconds}s = ${totalDuration}min`);
 
     return res.status(200).json({ sections, totalDuration });
   } catch (error: any) {
