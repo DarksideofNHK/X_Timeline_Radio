@@ -6,6 +6,7 @@ import { SegmentList } from './components/SegmentList';
 import { PostList, Playlist } from './components/Playlist';
 import { SectionIndicator } from './components/SectionIndicator';
 import { formatScriptDate } from './lib/scriptStorage';
+import type { ProgramMode } from './types';
 
 export default function App() {
   // シンプルモード用
@@ -34,7 +35,6 @@ export default function App() {
 
   const [showPlaylist, setShowPlaylist] = useState(false);
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
-  const [settingsConfirmed, setSettingsConfirmed] = useState(false);
 
   const isAIMode = audioSettings.programMode === 'ai-script';
 
@@ -72,6 +72,11 @@ export default function App() {
     } else {
       initializeProgram();
     }
+  };
+
+  // モード変更ハンドラー
+  const handleModeChange = (mode: ProgramMode) => {
+    setAudioSettings({ programMode: mode });
   };
 
   return (
@@ -177,118 +182,150 @@ export default function App() {
           </div>
         )}
 
-        {/* 初期設定 (番組生成開始ボタンが押されるまで表示) */}
-        {!settingsConfirmed && (
-          <div className="space-y-4">
-            {/* 番組生成開始ボタン（APIキーが揃っている時に上部に表示） */}
-            {hasApiKeys && (
-              <div className="bg-bg-card border border-border-light rounded-xl p-6 text-center shadow-sm">
-                <div className="text-4xl mb-3">🎙️</div>
-                <h2 className="text-xl font-bold mb-4 text-text-primary">準備完了！</h2>
+        {/* ========================================
+            状態1: セットアップ画面
+            表示条件: 番組なし && 初期化中でない
+        ======================================== */}
+        {!hasProgramContent && !isInitializing && !isGeneratingScript && (
+          <div className="space-y-6">
+            {/* ヒーローセクション */}
+            <div className="bg-bg-card rounded-xl p-8 text-center border border-border-light shadow-sm">
+              <div className="text-5xl mb-3">🎙️</div>
+              <h2 className="text-2xl font-bold mb-2 text-text-primary">X Timeline Radio</h2>
+              <p className="text-text-secondary mb-8">
+                Xのバズ投稿を、ラジオ風に読み上げます
+              </p>
+
+              {/* モード選択カード */}
+              <div className="flex gap-4 justify-center mb-8 max-w-md mx-auto">
+                {/* シンプルモード */}
                 <button
-                  onClick={() => {
-                    setSettingsConfirmed(true);
-                    handleStartProgram();
-                  }}
-                  className={`px-8 py-4 rounded-xl font-bold text-xl text-white shadow-lg transition-all hover:shadow-xl ${
-                    isAIMode
-                      ? 'bg-purple-600 hover:bg-purple-500'
-                      : 'bg-accent hover:bg-accent-hover'
+                  onClick={() => handleModeChange('simple')}
+                  className={`flex-1 p-4 rounded-xl border-2 transition-all ${
+                    !isAIMode
+                      ? 'border-accent bg-accent/10'
+                      : 'border-border-light bg-bg-menu hover:border-accent/50'
                   }`}
                 >
-                  {isAIMode ? '🎙️ AI番組を生成開始' : '📻 番組を生成開始'}
+                  <div className="text-3xl mb-2">📻</div>
+                  <div className={`font-bold ${!isAIMode ? 'text-accent' : 'text-text-primary'}`}>
+                    シンプル
+                  </div>
+                  <div className="text-xs text-text-secondary mt-1">
+                    投稿を順番に読み上げ
+                  </div>
+                </button>
+
+                {/* AI番組モード */}
+                <button
+                  onClick={() => handleModeChange('ai-script')}
+                  className={`flex-1 p-4 rounded-xl border-2 transition-all ${
+                    isAIMode
+                      ? 'border-purple-500 bg-purple-500/10'
+                      : 'border-border-light bg-bg-menu hover:border-purple-500/50'
+                  }`}
+                >
+                  <div className="text-3xl mb-2">🎙️</div>
+                  <div className={`font-bold ${isAIMode ? 'text-purple-600' : 'text-text-primary'}`}>
+                    AI番組
+                  </div>
+                  <div className="text-xs text-text-secondary mt-1">
+                    30分番組を自動生成
+                  </div>
                 </button>
               </div>
-            )}
 
-            {/* APIキー未設定の案内 */}
-            {!hasApiKeys && (
-              <div className="bg-bg-card rounded-xl p-4 text-center border border-border-light">
-                <p className="text-text-secondary">
-                  {isAIMode
-                    ? '3つのAPIキー（Grok, Gemini, OpenAI）を入力してください'
-                    : '2つのAPIキー（Grok, OpenAI）を入力してください'}
+              {/* スタートボタン */}
+              <button
+                onClick={handleStartProgram}
+                disabled={!hasApiKeys}
+                className={`px-10 py-4 rounded-xl font-bold text-xl text-white shadow-lg transition-all hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed ${
+                  isAIMode
+                    ? 'bg-purple-600 hover:bg-purple-500'
+                    : 'bg-accent hover:bg-accent-hover'
+                }`}
+              >
+                ▶ 番組をスタート
+              </button>
+
+              {/* APIキー不足時の案内 */}
+              {!hasApiKeys && (
+                <p className="text-yellow-600 text-sm mt-4">
+                  ⚠️ 下の設定でAPIキーを入力してください
+                </p>
+              )}
+
+              {/* APIキー状況 */}
+              {hasApiKeys && (
+                <p className="text-green-600 text-sm mt-4">
+                  ✅ 準備完了 - 約30分・7ジャンル・70投稿
+                </p>
+              )}
+            </div>
+
+            {/* 保存済み番組（AIモード時のみ） */}
+            {isAIMode && savedScripts.length > 0 && (
+              <div className="bg-bg-card rounded-xl p-4 border border-border-light shadow-sm">
+                <h3 className="font-bold mb-4 flex items-center gap-2 text-text-primary">
+                  <span>📚</span>
+                  保存済み番組（{savedScripts.length}件）
+                </h3>
+                <div className="space-y-2">
+                  {savedScripts.map((saved) => (
+                    <div
+                      key={saved.id}
+                      className="flex items-center justify-between bg-bg-menu rounded-lg px-4 py-3 border border-border-light"
+                    >
+                      <div className="flex-1">
+                        <div className="font-medium text-text-primary">{saved.title}</div>
+                        <div className="text-sm text-text-secondary">
+                          {saved.program.sections?.length || 0}セクション・
+                          約{saved.program.totalDuration}分
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => loadScript(saved.id)}
+                          className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-sm font-medium transition-colors"
+                        >
+                          ▶ 再生
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm('この番組を削除しますか？')) {
+                              deleteSavedScript(saved.id);
+                            }
+                          }}
+                          className="px-2 py-1.5 bg-bg-menu hover:bg-red-100 hover:text-red-600 rounded-lg text-sm border border-border-light transition-colors"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-text-disabled text-xs mt-3">
+                  最大10件まで保存されます。古い番組は自動的に削除されます。
                 </p>
               </div>
             )}
 
-            {/* 設定パネル */}
-            <Settings />
+            {/* 設定（折りたたみ - APIキー未設定時は開く） */}
+            <details open={!hasApiKeys} className="bg-bg-card rounded-xl border border-border-light shadow-sm">
+              <summary className="p-4 cursor-pointer hover:bg-bg-menu rounded-xl font-medium text-text-primary transition-colors">
+                ⚙️ 設定
+              </summary>
+              <div className="p-4 pt-0">
+                <Settings />
+              </div>
+            </details>
           </div>
         )}
 
-        {/* 番組未開始 - 設定完了済み、APIキーあり、番組なし、初期化中でもない */}
-        {settingsConfirmed && hasApiKeys && !hasProgramContent && !isInitializing && (
-          <div className="bg-bg-card rounded-xl p-8 text-center border border-border-light shadow-sm">
-            <div className="text-6xl mb-4">📻</div>
-            <h2 className="text-xl font-bold mb-2">番組を開始</h2>
-            <p className="text-text-secondary mb-6">
-              Xのバズ投稿を集めて、ラジオ風に読み上げます
-            </p>
-            <button
-              onClick={handleStartProgram}
-              className={`px-6 py-3 rounded-xl font-bold text-lg text-white shadow-lg transition-all hover:shadow-xl ${
-                isAIMode
-                  ? 'bg-purple-600 hover:bg-purple-500'
-                  : 'bg-accent hover:bg-accent-hover'
-              }`}
-            >
-              {isAIMode ? '🎙️ AI番組スタート' : '📻 番組スタート'}
-            </button>
-            <p className="text-text-disabled text-sm mt-4">
-              約30分・7ジャンル・70投稿
-            </p>
-          </div>
-        )}
-
-        {/* 保存済みスクリプト一覧（AIモードで番組がない時に表示） */}
-        {isAIMode && settingsConfirmed && hasApiKeys && !hasProgramContent && !isInitializing && savedScripts.length > 0 && (
-          <div className="bg-bg-card rounded-xl p-4 border border-border-light shadow-sm">
-            <h3 className="font-bold mb-4 flex items-center gap-2 text-text-primary">
-              <span>📚</span>
-              保存済み番組（{savedScripts.length}件）
-            </h3>
-            <div className="space-y-2">
-              {savedScripts.map((saved) => (
-                <div
-                  key={saved.id}
-                  className="flex items-center justify-between bg-bg-menu rounded-lg px-4 py-3 border border-border-light"
-                >
-                  <div className="flex-1">
-                    <div className="font-medium text-text-primary">{saved.title}</div>
-                    <div className="text-sm text-text-secondary">
-                      {saved.program.sections?.length || 0}セクション・
-                      約{saved.program.totalDuration}分
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => loadScript(saved.id)}
-                      className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-sm font-medium transition-colors"
-                    >
-                      ▶ 再生
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (confirm('この番組を削除しますか？')) {
-                          deleteSavedScript(saved.id);
-                        }
-                      }}
-                      className="px-2 py-1.5 bg-bg-menu hover:bg-red-100 hover:text-red-600 rounded-lg text-sm border border-border-light transition-colors"
-                    >
-                      🗑️
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <p className="text-text-disabled text-xs mt-3">
-              最大10件まで保存されます。古い番組は自動的に削除されます。
-            </p>
-          </div>
-        )}
-
-        {/* 初期化中 */}
+        {/* ========================================
+            状態2: ローディング
+            表示条件: 初期化中 or スクリプト生成中
+        ======================================== */}
         {(isInitializing || isGeneratingScript) && (
           <div className="bg-bg-card rounded-xl p-8 border border-border-light shadow-sm">
             <div className="text-center mb-6">
@@ -330,7 +367,10 @@ export default function App() {
           </div>
         )}
 
-        {/* 番組コンテンツ（番組が存在する限り常に表示） */}
+        {/* ========================================
+            状態3: 番組再生中
+            表示条件: 番組コンテンツあり
+        ======================================== */}
         {hasProgramContent && (
           <>
             {/* AIモード: セクションインジケーター */}
@@ -423,19 +463,17 @@ export default function App() {
                 </div>
               </div>
             )}
-          </>
-        )}
 
-        {/* 設定 (APIキー設定済み時は折りたたみ) */}
-        {hasApiKeys && (
-          <details className="bg-bg-card rounded-xl border border-border-light shadow-sm">
-            <summary className="p-4 cursor-pointer hover:bg-bg-menu rounded-xl font-medium text-text-primary transition-colors">
-              ⚙️ 設定
-            </summary>
-            <div className="p-4 pt-0">
-              <Settings />
-            </div>
-          </details>
+            {/* 設定（折りたたみ） */}
+            <details className="bg-bg-card rounded-xl border border-border-light shadow-sm">
+              <summary className="p-4 cursor-pointer hover:bg-bg-menu rounded-xl font-medium text-text-primary transition-colors">
+                ⚙️ 設定
+              </summary>
+              <div className="p-4 pt-0">
+                <Settings />
+              </div>
+            </details>
+          </>
         )}
       </main>
 
