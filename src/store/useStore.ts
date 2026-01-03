@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { ShowProgram, Segment, BuzzPost, ApiConfig, Genre, OpenAIVoiceId, ProgramMode, AIScriptProgram, ScriptSection } from '../types';
+import type { ShowProgram, Segment, BuzzPost, ApiConfig, Genre, OpenAIVoiceId, ProgramMode, AIScriptProgram, ScriptSection, Theme } from '../types';
 import { GENRES, PROGRAM_SEGMENTS, POSTS_PER_SEGMENT } from '../lib/genres';
 import { bgmManager, type BgmSource } from '../lib/bgm';
 import { audioCache } from '../lib/audioCache';
@@ -12,6 +12,7 @@ interface AudioSettings {
   openaiVoiceId: OpenAIVoiceId;
   speed: number; // 0.75 - 2.0
   programMode: ProgramMode; // 'simple' | 'ai-script'
+  theme: Theme; // 'light' | 'dark'
 }
 
 // キャッシュ設定
@@ -344,6 +345,7 @@ export const useStore = create<AppState>()(
         openaiVoiceId: 'nova',
         speed: 1.0,
         programMode: 'simple',  // デフォルトはシンプルモード
+        theme: 'light',  // デフォルトはライトテーマ
       },
       error: null,
 
@@ -357,10 +359,15 @@ export const useStore = create<AppState>()(
       },
 
       // 音声設定更新
-      setAudioSettings: (settings) =>
+      setAudioSettings: (settings) => {
+        // テーマが変更された場合、DOMに反映
+        if (settings.theme) {
+          document.documentElement.setAttribute('data-theme', settings.theme);
+        }
         set((state) => ({
           audioSettings: { ...state.audioSettings, ...settings },
-        })),
+        }));
+      },
 
       // 番組初期化
       initializeProgram: async () => {
@@ -1348,6 +1355,10 @@ export const useStore = create<AppState>()(
           }
         } else {
           console.log('[Store] Rehydration complete');
+          // 保存されたテーマを適用
+          if (state?.audioSettings?.theme) {
+            document.documentElement.setAttribute('data-theme', state.audioSettings.theme);
+          }
         }
       },
     }

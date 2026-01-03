@@ -4,22 +4,25 @@ export default {
   theme: {
     extend: {
       colors: {
-        // テキストカラー
-        'text-primary': '#34322D',
-        'text-secondary': '#5E5E5B',
-        'text-disabled': '#B9B9B7',
+        // テキストカラー（CSS変数参照でテーマ対応）
+        'text-primary': 'var(--color-text-primary)',
+        'text-secondary': 'var(--color-text-secondary)',
+        'text-disabled': 'var(--color-text-disabled)',
 
         // アクセントカラー
-        'accent': '#0081F2',
-        'accent-hover': '#0070D6',
+        'accent': 'var(--color-accent)',
+        'accent-hover': 'var(--color-accent-hover)',
 
         // 背景色
-        'bg-main': '#F8F8F7',
-        'bg-card': '#FFFFFF',
-        'bg-menu': '#F0F0EF',
+        'bg-main': 'var(--color-bg-main)',
+        'bg-card': 'var(--color-bg-card)',
+        'bg-menu': 'var(--color-bg-menu)',
 
         // ボーダー
-        'border-light': '#E5E5E3',
+        'border-light': 'var(--color-border)',
+
+        // ホバー
+        'hover-bg': 'var(--color-hover)',
       },
     },
   },

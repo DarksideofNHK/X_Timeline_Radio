@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useStore } from '../store/useStore';
 import { bgmManager, type BgmSource } from '../lib/bgm';
 import { bgmStorage, type BgmTrack } from '../lib/bgmStorage';
-import { SPEED_OPTIONS, OPENAI_VOICE_OPTIONS, type ProgramMode } from '../types';
+import { SPEED_OPTIONS, OPENAI_VOICE_OPTIONS, type ProgramMode, type Theme } from '../types';
 
 export function Settings() {
   const { apiConfig, setApiConfig, audioSettings, setAudioSettings, clearCache } = useStore();
@@ -158,6 +158,32 @@ export function Settings() {
       </div>
 
       <div className="pt-4 border-t border-border-light">
+        <h3 className="text-sm font-bold text-text-secondary mb-3">テーマ</h3>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setAudioSettings({ theme: 'light' as Theme })}
+            className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              audioSettings.theme === 'light'
+                ? 'bg-accent text-white'
+                : 'bg-bg-menu text-text-secondary hover:bg-hover-bg border border-border-light'
+            }`}
+          >
+            ☀️ ライト
+          </button>
+          <button
+            onClick={() => setAudioSettings({ theme: 'dark' as Theme })}
+            className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              audioSettings.theme === 'dark'
+                ? 'bg-accent text-white'
+                : 'bg-bg-menu text-text-secondary hover:bg-hover-bg border border-border-light'
+            }`}
+          >
+            🌙 ダーク
+          </button>
+        </div>
+      </div>
+
+      <div className="pt-4 border-t border-border-light">
         <h3 className="text-sm font-bold text-text-secondary mb-3">番組モード</h3>
         <div className="flex gap-2 mb-2">
           <button
@@ -165,7 +191,7 @@ export function Settings() {
             className={`flex-1 px-3 py-3 rounded-lg text-sm transition-colors ${
               audioSettings.programMode === 'simple'
                 ? 'bg-accent text-white'
-                : 'bg-bg-menu text-text-secondary hover:bg-gray-200 border border-border-light'
+                : 'bg-bg-menu text-text-secondary hover:bg-hover-bg border border-border-light'
             }`}
           >
             <div className="font-bold">📻 シンプルモード</div>
@@ -176,7 +202,7 @@ export function Settings() {
             className={`flex-1 px-3 py-3 rounded-lg text-sm transition-colors ${
               audioSettings.programMode === 'ai-script'
                 ? 'bg-purple-600 text-white'
-                : 'bg-bg-menu text-text-secondary hover:bg-gray-200 border border-border-light'
+                : 'bg-bg-menu text-text-secondary hover:bg-hover-bg border border-border-light'
             }`}
           >
             <div className="font-bold">🎙️ AI番組モード</div>
@@ -250,7 +276,7 @@ export function Settings() {
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               bgmEnabled
                 ? 'bg-green-600 hover:bg-green-500 text-white'
-                : 'bg-bg-menu hover:bg-gray-200 text-text-secondary border border-border-light'
+                : 'bg-bg-menu hover:bg-hover-bg text-text-secondary border border-border-light'
             }`}
           >
             {bgmEnabled ? '🔊 BGM ON' : '🔇 BGM OFF'}
@@ -264,7 +290,7 @@ export function Settings() {
             className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
               bgmSource === 'default'
                 ? 'bg-accent text-white'
-                : 'bg-bg-menu text-text-secondary hover:bg-gray-200 border border-border-light'
+                : 'bg-bg-menu text-text-secondary hover:bg-hover-bg border border-border-light'
             }`}
           >
             🎵 デフォルトBGM
@@ -274,7 +300,7 @@ export function Settings() {
             className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
               bgmSource === 'uploaded'
                 ? 'bg-accent text-white'
-                : 'bg-bg-menu text-text-secondary hover:bg-gray-200 border border-border-light'
+                : 'bg-bg-menu text-text-secondary hover:bg-hover-bg border border-border-light'
             }`}
           >
             📁 カスタムBGM
@@ -295,7 +321,7 @@ export function Settings() {
             <div className="mb-3">
               <label className={`inline-block px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-colors ${
                 tracks.length >= 5
-                  ? 'bg-gray-200 cursor-not-allowed text-text-disabled'
+                  ? 'bg-bg-menu cursor-not-allowed text-text-disabled'
                   : 'bg-accent hover:bg-accent-hover text-white'
               }`}>
                 {uploading ? '⏳ アップロード中...' : '📁 ファイル追加'}
@@ -352,7 +378,7 @@ export function Settings() {
         </p>
         <button
           onClick={handleClearCache}
-          className="px-4 py-2 bg-bg-menu hover:bg-gray-200 rounded-lg text-sm font-medium text-text-secondary border border-border-light transition-colors"
+          className="px-4 py-2 bg-bg-menu hover:bg-hover-bg rounded-lg text-sm font-medium text-text-secondary border border-border-light transition-colors"
         >
           キャッシュをクリア
         </button>

@@ -100,7 +100,7 @@ export default function App() {
                     className={`px-3 py-1.5 text-sm font-medium transition-colors ${
                       !isAIMode
                         ? 'bg-accent text-white'
-                        : 'bg-bg-menu text-text-secondary hover:bg-gray-200'
+                        : 'bg-bg-menu text-text-secondary hover:bg-hover-bg'
                     }`}
                   >
                     📻 シンプル
@@ -115,7 +115,7 @@ export default function App() {
                     className={`px-3 py-1.5 text-sm font-medium transition-colors ${
                       isAIMode
                         ? 'bg-purple-600 text-white'
-                        : 'bg-bg-menu text-text-secondary hover:bg-gray-200'
+                        : 'bg-bg-menu text-text-secondary hover:bg-hover-bg'
                     }`}
                   >
                     🎙️ AI番組
@@ -128,7 +128,7 @@ export default function App() {
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                     showPlaylist
                       ? 'bg-accent text-white'
-                      : 'bg-bg-menu text-text-secondary hover:bg-gray-200 border border-border-light'
+                      : 'bg-bg-menu text-text-secondary hover:bg-hover-bg border border-border-light'
                   }`}
                 >
                   📋 プレイリスト
@@ -140,7 +140,7 @@ export default function App() {
                     setShowPlaylist(false);
                     reset();
                   }}
-                  className="px-3 py-1.5 bg-bg-menu hover:bg-gray-200 rounded-lg text-sm font-medium text-text-secondary border border-border-light transition-colors"
+                  className="px-3 py-1.5 bg-bg-menu hover:bg-hover-bg rounded-lg text-sm font-medium text-text-secondary border border-border-light transition-colors"
                 >
                   リセット
                 </button>
@@ -390,7 +390,7 @@ export default function App() {
                               className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
                                 index === currentSectionIndex
                                   ? 'bg-purple-500 hover:bg-purple-400 text-white'
-                                  : 'bg-bg-menu hover:bg-gray-200 text-text-secondary border border-border-light'
+                                  : 'bg-bg-menu hover:bg-hover-bg text-text-secondary border border-border-light'
                               }`}
                             >
                               ▶ 再生
