@@ -105,14 +105,11 @@ export function RelatedPosts() {
   const [currentPage, setCurrentPage] = useState(0);
   const [isExpanded, setIsExpanded] = useState(false);
 
-  if (!collectedAnnotations || collectedAnnotations.length === 0) {
-    return null;
-  }
-
-  const totalPages = Math.ceil(collectedAnnotations.length / POSTS_PER_PAGE);
+  const hasAnnotations = collectedAnnotations && collectedAnnotations.length > 0;
+  const totalPages = hasAnnotations ? Math.ceil(collectedAnnotations.length / POSTS_PER_PAGE) : 0;
   const startIndex = currentPage * POSTS_PER_PAGE;
-  const endIndex = Math.min(startIndex + POSTS_PER_PAGE, collectedAnnotations.length);
-  const currentPosts = collectedAnnotations.slice(startIndex, endIndex);
+  const endIndex = hasAnnotations ? Math.min(startIndex + POSTS_PER_PAGE, collectedAnnotations.length) : 0;
+  const currentPosts = hasAnnotations ? collectedAnnotations.slice(startIndex, endIndex) : [];
 
   return (
     <div className="bg-bg-card rounded-xl border border-border-light overflow-hidden">
@@ -124,9 +121,15 @@ export function RelatedPosts() {
         <div className="flex items-center gap-2">
           <span className="text-lg">📋</span>
           <span className="font-medium">関連投稿を見る</span>
-          <span className="text-text-secondary text-sm">
-            ({collectedAnnotations.length}件)
-          </span>
+          {hasAnnotations ? (
+            <span className="text-text-secondary text-sm">
+              ({collectedAnnotations.length}件)
+            </span>
+          ) : (
+            <span className="text-text-disabled text-sm">
+              (データなし)
+            </span>
+          )}
         </div>
         <span className={`transform transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
           ▼
@@ -136,53 +139,66 @@ export function RelatedPosts() {
       {/* コンテンツ */}
       {isExpanded && (
         <div className="border-t border-border-light">
-          {/* 説明 */}
-          <div className="p-4 bg-bg-menu/50 text-sm text-text-secondary">
-            Grok APIが検索時に参照した実際のX投稿です。
-            埋め込みが表示されない場合は、リンクをクリックして確認できます。
-          </div>
-
-          {/* 投稿リスト */}
-          <div className="p-4 space-y-4">
-            {currentPosts.map((post) => (
-              <div key={post.statusId} className="relative">
-                <XEmbed statusId={post.statusId} />
-                <a
-                  href={post.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="absolute top-2 right-2 bg-bg-card/80 backdrop-blur px-2 py-1 rounded text-xs text-accent hover:underline"
-                >
-                  🔗 開く
-                </a>
-              </div>
-            ))}
-          </div>
-
-          {/* ページネーション */}
-          {totalPages > 1 && (
-            <div className="p-4 border-t border-border-light flex items-center justify-between">
-              <button
-                onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
-                disabled={currentPage === 0}
-                className="px-4 py-2 bg-bg-menu rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-bg-card transition-colors"
-              >
-                ← 前へ
-              </button>
-
-              <div className="text-sm text-text-secondary">
-                {startIndex + 1} - {endIndex} / {collectedAnnotations.length}件
-                <span className="mx-2">|</span>
-                ページ {currentPage + 1} / {totalPages}
+          {hasAnnotations ? (
+            <>
+              {/* 説明 */}
+              <div className="p-4 bg-bg-menu/50 text-sm text-text-secondary">
+                Grok APIが検索時に参照した実際のX投稿です。
+                埋め込みが表示されない場合は、リンクをクリックして確認できます。
               </div>
 
-              <button
-                onClick={() => setCurrentPage((p) => Math.min(totalPages - 1, p + 1))}
-                disabled={currentPage >= totalPages - 1}
-                className="px-4 py-2 bg-bg-menu rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-bg-card transition-colors"
-              >
-                次へ →
-              </button>
+              {/* 投稿リスト */}
+              <div className="p-4 space-y-4">
+                {currentPosts.map((post) => (
+                  <div key={post.statusId} className="relative">
+                    <XEmbed statusId={post.statusId} />
+                    <a
+                      href={post.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="absolute top-2 right-2 bg-bg-card/80 backdrop-blur px-2 py-1 rounded text-xs text-accent hover:underline"
+                    >
+                      🔗 開く
+                    </a>
+                  </div>
+                ))}
+              </div>
+
+              {/* ページネーション */}
+              {totalPages > 1 && (
+                <div className="p-4 border-t border-border-light flex items-center justify-between">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
+                    disabled={currentPage === 0}
+                    className="px-4 py-2 bg-bg-menu rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-bg-card transition-colors"
+                  >
+                    ← 前へ
+                  </button>
+
+                  <div className="text-sm text-text-secondary">
+                    {startIndex + 1} - {endIndex} / {collectedAnnotations!.length}件
+                    <span className="mx-2">|</span>
+                    ページ {currentPage + 1} / {totalPages}
+                  </div>
+
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages - 1, p + 1))}
+                    disabled={currentPage >= totalPages - 1}
+                    className="px-4 py-2 bg-bg-menu rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-bg-card transition-colors"
+                  >
+                    次へ →
+                  </button>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="p-6 text-center">
+              <p className="text-text-secondary mb-2">
+                関連投稿データがありません
+              </p>
+              <p className="text-text-disabled text-sm">
+                「🔄 X情報再取得」ボタンを押すと、Grokが参照した全投稿を取得できます
+              </p>
             </div>
           )}
         </div>
