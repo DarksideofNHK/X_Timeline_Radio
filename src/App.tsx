@@ -182,7 +182,7 @@ export default function App() {
           <div className="space-y-4">
             {/* 番組生成開始ボタン（APIキーが揃っている時に上部に表示） */}
             {hasApiKeys && (
-              <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-6 text-center">
+              <div className="bg-bg-card border border-border-light rounded-xl p-6 text-center shadow-sm">
                 <div className="text-4xl mb-3">🎙️</div>
                 <h2 className="text-xl font-bold mb-4 text-text-primary">準備完了！</h2>
                 <button
@@ -319,9 +319,9 @@ export default function App() {
             )}
             {isGeneratingScript && (
               <div className="mt-6 text-center">
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-50 rounded-lg border border-purple-200">
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-bg-menu rounded-lg border border-purple-400">
                   <div className="w-3 h-3 bg-purple-400 rounded-full animate-pulse"></div>
-                  <span className="text-purple-700 text-sm">
+                  <span className="text-purple-500 text-sm">
                     オープニング・7つのコーナー・エンディングを構成中...
                   </span>
                 </div>
