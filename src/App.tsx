@@ -187,7 +187,7 @@ export default function App() {
                   : 'bg-blue-600 hover:bg-blue-500'
               }`}
             >
-              {isAIMode ? '🎙️ AIスクリプト番組スタート' : '📻 番組スタート'}
+              {isAIMode ? '🎙️ AI番組スタート' : '📻 番組スタート'}
             </button>
             <p className="text-slate-500 text-sm mt-4">
               約30分・7ジャンル・70投稿
@@ -250,7 +250,7 @@ export default function App() {
                 {isGeneratingScript ? '🎙️' : '📡'}
               </div>
               <h2 className="text-xl font-bold mb-2">
-                {isGeneratingScript ? 'AIスクリプト生成中...' : '番組を準備中...'}
+                {isGeneratingScript ? 'AI番組を生成中...' : '番組を準備中...'}
               </h2>
               <p className="text-slate-400">
                 {isGeneratingScript

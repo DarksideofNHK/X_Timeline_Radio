@@ -173,14 +173,20 @@ export function Settings() {
                 : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
             }`}
           >
-            <div className="font-bold">🎙️ AIスクリプトモード</div>
+            <div className="font-bold">🎙️ AI番組モード</div>
             <div className="text-xs opacity-70 mt-1">Geminiが30分番組を生成</div>
           </button>
         </div>
         {audioSettings.programMode === 'ai-script' && (
-          <p className="text-xs text-yellow-500 mb-2">
-            ⚠️ AIスクリプトモードはGemini APIキーが必要です
-          </p>
+          apiConfig.geminiApiKey ? (
+            <p className="text-xs text-green-400 mb-2">
+              ✅ Gemini APIキーが設定されています
+            </p>
+          ) : (
+            <p className="text-xs text-yellow-500 mb-2">
+              ⚠️ AI番組モードにはGemini APIキーの入力が必要です
+            </p>
+          )
         )}
       </div>
 
