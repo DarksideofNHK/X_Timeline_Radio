@@ -146,7 +146,7 @@ export default function App() {
                       : 'bg-bg-menu text-text-secondary hover:bg-hover-bg border border-border-light'
                   }`}
                 >
-                  📋 X投稿
+                  📋 X投稿表示
                 </button>
               )}
               {/* X情報再取得ボタン */}
