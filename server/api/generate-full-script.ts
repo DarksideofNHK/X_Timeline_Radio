@@ -131,7 +131,7 @@ NHKラジオ「らじるラボ」やTBSラジオ「荻上チキ・Session」の�
 
 【番組概要】
 - 番組名: X Timeline Radio
-- 形式: 30分間の情報バラエティ番組
+- 形式: 20分間の情報バラエティ番組
 - コンセプト: Xで話題になっている投稿を紹介しながら、今の日本を読み解く
 
 【今回の投稿データ】
@@ -208,7 +208,7 @@ ${allPostsText}
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
         temperature: 0.85,
-        maxOutputTokens: 65536,  // 30分番組に十分なトークン
+        maxOutputTokens: 65536,  // 20分番組に十分なトークン
         responseMimeType: 'application/json',
       },
     }),
