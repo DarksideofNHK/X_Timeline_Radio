@@ -442,13 +442,27 @@ export default function App() {
                           {posts.map((post: any, idx: number) => (
                             <div key={idx} className="bg-bg-menu rounded-lg p-3 border border-border-light">
                               <div className="flex items-center gap-2 mb-1">
-                                <span className="font-medium text-sm text-accent">
+                                <a
+                                  href={post.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="font-medium text-sm text-accent hover:underline"
+                                >
                                   @{post.author?.username}
-                                </span>
+                                </a>
                                 <span className="text-text-disabled text-xs">
                                   {post.metrics?.likes > 0 && `♥${post.metrics.likes.toLocaleString()}`}
                                   {post.metrics?.retweets > 0 && ` 🔄${post.metrics.retweets.toLocaleString()}`}
                                 </span>
+                                <a
+                                  href={post.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-text-disabled hover:text-accent text-xs ml-auto"
+                                  title="元投稿を開く"
+                                >
+                                  🔗
+                                </a>
                               </div>
                               <p className="text-sm text-text-primary line-clamp-3">
                                 {post.text}
