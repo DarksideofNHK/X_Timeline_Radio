@@ -238,7 +238,7 @@ export function Playlist({ onClose }: PlaylistProps) {
                         className={`px-3 py-1 rounded text-xs ${
                           isCurrentPost
                             ? 'bg-green-600 text-white'
-                            : 'bg-bg-menu hover:bg-gray-200 text-text-secondary border border-border-light'
+                            : 'bg-bg-menu hover:bg-hover-bg text-text-secondary border border-border-light'
                         }`}
                         onClick={(e) => {
                           e.stopPropagation();

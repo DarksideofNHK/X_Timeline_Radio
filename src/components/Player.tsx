@@ -107,7 +107,7 @@ export function Player() {
           <button
             onClick={handleNextSection}
             disabled={currentSectionIndex >= totalSections - 1}
-            className="w-10 h-10 bg-bg-menu hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed rounded-full flex items-center justify-center text-lg flex-shrink-0 border border-border-light transition-colors"
+            className="w-10 h-10 bg-bg-menu hover:bg-hover-bg disabled:opacity-50 disabled:cursor-not-allowed rounded-full flex items-center justify-center text-lg flex-shrink-0 border border-border-light transition-colors"
             title="次のセクション"
           >
             ⏭️
@@ -189,7 +189,7 @@ export function Player() {
         {/* スキップボタン */}
         <button
           onClick={nextSegment}
-          className="w-10 h-10 bg-bg-menu hover:bg-gray-200 rounded-full flex items-center justify-center text-lg flex-shrink-0 border border-border-light transition-colors"
+          className="w-10 h-10 bg-bg-menu hover:bg-hover-bg rounded-full flex items-center justify-center text-lg flex-shrink-0 border border-border-light transition-colors"
           title="次のセグメント"
         >
           ⏭️

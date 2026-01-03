@@ -216,6 +216,9 @@ export interface AppState {
 // 番組モード
 export type ProgramMode = 'simple' | 'ai-script';
 
+// テーマ
+export type Theme = 'light' | 'dark';
+
 // スクリプトセクションタイプ
 export type ScriptSectionType = 'opening' | 'corner' | 'transition' | 'closing';
 
