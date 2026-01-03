@@ -32,6 +32,7 @@ export default function App() {
 
   const [showPlaylist, setShowPlaylist] = useState(false);
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
+  const [settingsConfirmed, setSettingsConfirmed] = useState(false);
 
   const isAIMode = audioSettings.programMode === 'ai-script';
 
@@ -139,11 +140,39 @@ export default function App() {
           </div>
         )}
 
-        {/* 設定 (APIキー未設定時) */}
-        {!hasApiKeys && <Settings />}
+        {/* 初期設定 (設定完了ボタンが押されるまで表示) */}
+        {!settingsConfirmed && (
+          <div className="space-y-4">
+            <Settings />
+            {hasApiKeys && (
+              <div className="bg-green-900/30 border border-green-700 rounded-lg p-4 text-center">
+                <p className="text-green-300 mb-3">✅ 必要なAPIキーがすべて設定されました</p>
+                <button
+                  onClick={() => setSettingsConfirmed(true)}
+                  className={`px-6 py-3 rounded-lg font-bold text-lg ${
+                    isAIMode
+                      ? 'bg-purple-600 hover:bg-purple-500'
+                      : 'bg-blue-600 hover:bg-blue-500'
+                  }`}
+                >
+                  設定完了 →
+                </button>
+              </div>
+            )}
+            {!hasApiKeys && (
+              <div className="bg-slate-800 rounded-lg p-4 text-center">
+                <p className="text-slate-400">
+                  {isAIMode
+                    ? '3つのAPIキー（Grok, Gemini, OpenAI）を入力してください'
+                    : '2つのAPIキー（Grok, OpenAI）を入力してください'}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
-        {/* 番組未開始 - APIキーあり、番組なし、初期化中でもない */}
-        {hasApiKeys && !hasProgramContent && !isInitializing && (
+        {/* 番組未開始 - 設定完了済み、APIキーあり、番組なし、初期化中でもない */}
+        {settingsConfirmed && hasApiKeys && !hasProgramContent && !isInitializing && (
           <div className="bg-slate-800 rounded-lg p-8 text-center">
             <div className="text-6xl mb-4">📻</div>
             <h2 className="text-xl font-bold mb-2">番組を開始</h2>
@@ -167,7 +196,7 @@ export default function App() {
         )}
 
         {/* 保存済みスクリプト一覧（AIモードで番組がない時に表示） */}
-        {isAIMode && hasApiKeys && !hasProgramContent && !isInitializing && savedScripts.length > 0 && (
+        {isAIMode && settingsConfirmed && hasApiKeys && !hasProgramContent && !isInitializing && savedScripts.length > 0 && (
           <div className="bg-slate-800 rounded-lg p-4">
             <h3 className="font-bold mb-4 flex items-center gap-2">
               <span>📚</span>
