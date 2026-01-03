@@ -59,7 +59,7 @@ https://x-timeline-radio.vercel.app
 - **Frontend**: React + TypeScript + Vite
 - **State Management**: Zustand（persist middleware で状態永続化）
 - **Styling**: Tailwind CSS
-- **Hosting**: Netlify (Serverless Functions)
+- **Hosting**: Vercel (Serverless Functions)
 - **APIs**:
   - Grok API (x.ai) - X投稿検索（`x_search` tool）
   - Gemini API (Google) - スクリプト生成
@@ -86,8 +86,6 @@ x-timeline-radio-v2/
 │   ├── collect-posts.ts      # Grok APIで投稿収集
 │   ├── generate-full-script.ts # Geminiでスクリプト生成
 │   └── generate-audio-openai.ts # OpenAI TTSで音声生成
-├── netlify/functions/        # Netlify Functions
-│   └── (同上のAPI)
 ├── src/
 │   ├── components/           # Reactコンポーネント
 │   │   ├── Playlist.tsx      # 投稿リスト表示
@@ -96,7 +94,7 @@ x-timeline-radio-v2/
 │   ├── store/                # Zustand状態管理
 │   ├── lib/                  # ユーティリティ
 │   └── types/                # TypeScript型定義
-├── netlify.toml              # Netlify設定
+├── vercel.json               # Vercel設定
 └── package.json
 ```
 
@@ -108,9 +106,9 @@ x-timeline-radio-v2/
 - 投稿キャッシュにannotationsを含め、リロード時も復元可能に
 
 ### v2.0.0
-- Netlifyへ移行
 - AIスクリプトモードとシンプルモードの切り替え
 - スクリプト保存機能
+- Vercel Serverless Functionsでバックエンド構築
 
 ## ライセンス
 
