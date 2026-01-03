@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { useStore } from '../store/useStore';
-import { bgmManager } from '../lib/bgm';
+import { bgmManager, type BgmSource } from '../lib/bgm';
 import { bgmStorage, type BgmTrack } from '../lib/bgmStorage';
 import { SPEED_OPTIONS, OPENAI_VOICE_OPTIONS, type ProgramMode } from '../types';
 
 export function Settings() {
   const { apiConfig, setApiConfig, audioSettings, setAudioSettings, clearCache } = useStore();
   const [bgmEnabled, setBgmEnabled] = useState(false);
+  const [bgmSource, setBgmSource] = useState<BgmSource>('default');
   const [tracks, setTracks] = useState<BgmTrack[]>([]);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -26,13 +27,18 @@ export function Settings() {
       bgmManager.stop();
       setBgmEnabled(false);
     } else {
-      if (tracks.length === 0) {
-        alert('BGMファイルをアップロードしてください');
-        return;
-      }
-      bgmManager.setConfig({ source: 'uploaded', volume: 0.15 });
+      bgmManager.setConfig({ source: bgmSource, volume: 0.15 });
       await bgmManager.start();
       setBgmEnabled(true);
+    }
+  };
+
+  const handleBgmSourceChange = async (source: BgmSource) => {
+    setBgmSource(source);
+    if (bgmEnabled) {
+      bgmManager.stop();
+      bgmManager.setConfig({ source, volume: 0.15 });
+      await bgmManager.start();
     }
   };
 
@@ -235,70 +241,107 @@ export function Settings() {
       </div>
 
       <div className="pt-4 border-t border-slate-700">
-        <h3 className="text-sm font-bold text-slate-400 mb-3">BGM設定（最大5曲）</h3>
+        <h3 className="text-sm font-bold text-slate-400 mb-3">BGM設定</h3>
 
-        {/* アップロードボタン */}
+        {/* BGM ON/OFF */}
         <div className="flex items-center gap-3 mb-4">
           <button
             onClick={handleBgmToggle}
-            disabled={tracks.length === 0}
             className={`px-4 py-2 rounded text-sm ${
               bgmEnabled
                 ? 'bg-green-600 hover:bg-green-500'
-                : tracks.length === 0
-                  ? 'bg-slate-600 cursor-not-allowed'
-                  : 'bg-slate-700 hover:bg-slate-600'
+                : 'bg-slate-700 hover:bg-slate-600'
             }`}
           >
             {bgmEnabled ? '🔊 BGM ON' : '🔇 BGM OFF'}
           </button>
-
-          <label className={`px-4 py-2 rounded text-sm cursor-pointer ${
-            tracks.length >= 5
-              ? 'bg-slate-600 cursor-not-allowed'
-              : 'bg-blue-600 hover:bg-blue-500'
-          }`}>
-            {uploading ? '⏳ アップロード中...' : '📁 ファイル追加'}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="audio/*"
-              multiple
-              onChange={handleFileSelect}
-              disabled={tracks.length >= 5 || uploading}
-              className="hidden"
-            />
-          </label>
         </div>
 
-        {/* トラック一覧 */}
-        {tracks.length === 0 ? (
-          <p className="text-xs text-slate-500">
-            MP3ファイルをアップロードしてください（最大5曲）
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {tracks.map((track, index) => (
-              <div
-                key={track.id}
-                className="flex items-center justify-between bg-slate-700 rounded px-3 py-2"
-              >
-                <span className="text-sm truncate flex-1">
-                  {index + 1}. {track.name}
-                </span>
-                <button
-                  onClick={() => handleRemoveTrack(track.id)}
-                  className="text-red-400 hover:text-red-300 ml-2 text-sm"
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
+        {/* BGMソース選択 */}
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={() => handleBgmSourceChange('default')}
+            className={`flex-1 px-3 py-2 rounded text-sm ${
+              bgmSource === 'default'
+                ? 'bg-blue-600 text-white'
+                : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+            }`}
+          >
+            🎵 デフォルトBGM
+          </button>
+          <button
+            onClick={() => handleBgmSourceChange('uploaded')}
+            className={`flex-1 px-3 py-2 rounded text-sm ${
+              bgmSource === 'uploaded'
+                ? 'bg-blue-600 text-white'
+                : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+            }`}
+          >
+            📁 カスタムBGM
+          </button>
+        </div>
+
+        {/* デフォルトBGM情報 */}
+        {bgmSource === 'default' && (
+          <div className="bg-slate-700/50 rounded px-3 py-2 mb-3">
+            <p className="text-sm text-slate-300">🎵 Digital Newsfeed Groove</p>
+            <p className="text-xs text-slate-500">Elevenlabs生成</p>
           </div>
         )}
 
+        {/* カスタムBGMアップロード */}
+        {bgmSource === 'uploaded' && (
+          <>
+            <div className="mb-3">
+              <label className={`inline-block px-4 py-2 rounded text-sm cursor-pointer ${
+                tracks.length >= 5
+                  ? 'bg-slate-600 cursor-not-allowed'
+                  : 'bg-blue-600 hover:bg-blue-500'
+              }`}>
+                {uploading ? '⏳ アップロード中...' : '📁 ファイル追加'}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="audio/*"
+                  multiple
+                  onChange={handleFileSelect}
+                  disabled={tracks.length >= 5 || uploading}
+                  className="hidden"
+                />
+              </label>
+              <span className="text-xs text-slate-500 ml-2">最大5曲</span>
+            </div>
+
+            {/* トラック一覧 */}
+            {tracks.length === 0 ? (
+              <p className="text-xs text-slate-500">
+                MP3ファイルをアップロードしてください
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {tracks.map((track, index) => (
+                  <div
+                    key={track.id}
+                    className="flex items-center justify-between bg-slate-700 rounded px-3 py-2"
+                  >
+                    <span className="text-sm truncate flex-1">
+                      {index + 1}. {track.name}
+                    </span>
+                    <button
+                      onClick={() => handleRemoveTrack(track.id)}
+                      className="text-red-400 hover:text-red-300 ml-2 text-sm"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
         <p className="text-xs text-slate-500 mt-3">
-          ランダムに再生されます。TTS再生中は自動的に音量が下がります。
+          TTS再生中は自動的に音量が下がります。
         </p>
       </div>
 
