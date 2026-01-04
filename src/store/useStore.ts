@@ -242,6 +242,42 @@ async function generateAudioUrl(
 let currentAudioElement: HTMLAudioElement | null = null;
 // ユーザーによる停止かどうかを追跡
 let isStoppingByUser = false;
+// AudioContext（モバイルブラウザ対応）
+let audioContext: AudioContext | null = null;
+// オーディオ権限が有効化されたか
+let audioUnlocked = false;
+
+// モバイルブラウザ用: ユーザータップ時にオーディオ権限を取得
+export async function unlockAudio(): Promise<void> {
+  if (audioUnlocked) {
+    console.log('[Audio] Already unlocked');
+    return;
+  }
+
+  try {
+    // AudioContextを作成してresumeする
+    if (!audioContext) {
+      audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+
+    if (audioContext.state === 'suspended') {
+      await audioContext.resume();
+    }
+
+    // 無音を再生してオーディオ権限を確立
+    const silentAudio = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=');
+    silentAudio.volume = 0.01;
+    await silentAudio.play();
+    silentAudio.pause();
+
+    audioUnlocked = true;
+    console.log('[Audio] Unlocked successfully');
+  } catch (e) {
+    console.error('[Audio] Failed to unlock:', e);
+    // エラーでも続行を試みる
+    audioUnlocked = true;
+  }
+}
 
 // 音声を即座に停止する関数
 function stopCurrentAudio() {

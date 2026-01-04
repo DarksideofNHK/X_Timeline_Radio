@@ -5,6 +5,15 @@ import { bgmStorage } from './bgmStorage';
 
 export type BgmSource = 'none' | 'default' | 'uploaded';
 
+// モバイルブラウザ判定
+function isMobileBrowser(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
+// モバイル用音量補正 (-8dB ≈ 0.4倍)
+const MOBILE_VOLUME_MULTIPLIER = 0.4;
+
 // デフォルトBGM設定
 const DEFAULT_BGM = {
   name: 'Digital Newsfeed Groove',
@@ -20,18 +29,29 @@ class BgmManager {
   private audioElement: HTMLAudioElement | null = null;
   private currentObjectUrl: string | null = null;
   private isPlaying = false;
+  private isMobile: boolean;
   private config: BgmConfig = {
     source: 'default', // デフォルトBGMをデフォルトに
     volume: 0.15,
   };
 
-  constructor() {}
+  constructor() {
+    this.isMobile = isMobileBrowser();
+    if (this.isMobile) {
+      console.log('[BGM] Mobile browser detected, applying -8dB volume reduction');
+    }
+  }
+
+  // モバイル対応の実効音量を取得
+  private getEffectiveVolume(baseVolume: number): number {
+    return this.isMobile ? baseVolume * MOBILE_VOLUME_MULTIPLIER : baseVolume;
+  }
 
   // 設定を更新
   setConfig(config: Partial<BgmConfig>) {
     this.config = { ...this.config, ...config };
     if (this.audioElement) {
-      this.audioElement.volume = this.config.volume;
+      this.audioElement.volume = this.getEffectiveVolume(this.config.volume);
     }
   }
 
@@ -74,7 +94,7 @@ class BgmManager {
 
     this.audioElement = new Audio(audioSrc);
     this.audioElement.loop = true;
-    this.audioElement.volume = this.config.volume;
+    this.audioElement.volume = this.getEffectiveVolume(this.config.volume);
 
     // 曲が終わったら次のランダム曲へ（アップロード曲の場合のみ）
     this.audioElement.onended = () => {
@@ -141,7 +161,8 @@ class BgmManager {
         return;
       }
 
-      const targetVolume = this.config.volume * 0.5; // 50%まで（下げすぎない）
+      const effectiveVolume = this.getEffectiveVolume(this.config.volume);
+      const targetVolume = effectiveVolume * 0.5; // 50%まで（下げすぎない）
       const startVolume = this.audioElement.volume;
       const steps = 20;
       const stepDuration = duration / steps;
@@ -172,7 +193,7 @@ class BgmManager {
         return;
       }
 
-      const targetVolume = this.config.volume;
+      const targetVolume = this.getEffectiveVolume(this.config.volume);
       const startVolume = this.audioElement.volume;
       const steps = 15;
       const stepDuration = duration / steps;

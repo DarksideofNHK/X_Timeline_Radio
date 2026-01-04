@@ -1,4 +1,4 @@
-import { useStore } from '../store/useStore';
+import { useStore, unlockAudio } from '../store/useStore';
 
 export function Player() {
   const {
@@ -40,10 +40,12 @@ export function Player() {
 
     const progress = totalChunks > 0 ? Math.round((completedChunks / totalChunks) * 100) : 0;
 
-    const handlePlayPause = () => {
+    const handlePlayPause = async () => {
       if (isPlaying) {
         stopPlayback();
       } else {
+        // モバイルブラウザ用: 先にオーディオ権限を取得
+        await unlockAudio();
         playAIScript();
       }
     };
@@ -59,7 +61,7 @@ export function Player() {
         <div className="flex items-center gap-4">
           {/* 再生ボタン */}
           <button
-            onClick={() => playAIScript()}
+            onClick={handlePlayPause}
             disabled={isPlaying}
             className={`w-12 h-12 rounded-full flex items-center justify-center text-xl flex-shrink-0 shadow-lg transition-all ${
               isPlaying
@@ -157,12 +159,19 @@ export function Player() {
     ? Math.round((currentPostNumber / program.totalPosts) * 100)
     : 0;
 
+  // シンプルモードの再生ハンドラー
+  const handleSimplePlay = async () => {
+    // モバイルブラウザ用: 先にオーディオ権限を取得
+    await unlockAudio();
+    startPlayback();
+  };
+
   return (
     <div className="p-4">
       <div className="flex items-center gap-4">
         {/* 再生ボタン */}
         <button
-          onClick={() => startPlayback()}
+          onClick={handleSimplePlay}
           disabled={isPlaying}
           className={`w-12 h-12 rounded-full flex items-center justify-center text-xl flex-shrink-0 shadow-lg transition-all ${
             isPlaying
