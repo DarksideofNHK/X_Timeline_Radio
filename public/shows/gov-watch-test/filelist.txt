@@ -1,0 +1,6 @@
+file 'opening.mp3'
+file 'cabinet.mp3'
+file 'ministries.mp3'
+file 'agencies.mp3'
+file 'cities.mp3'
+file 'ending.mp3'

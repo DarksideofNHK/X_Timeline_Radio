@@ -1,0 +1,77 @@
+{
+  "date": "2026-01-04",
+  "generatedAt": "2026-01-04T07:33:33.280Z",
+  "totalDuration": 1390,
+  "sections": [
+    {
+      "id": "opening",
+      "type": "opening",
+      "title": "オープニング",
+      "audioFile": "opening.mp3",
+      "estimatedDuration": 45
+    },
+    {
+      "id": "corner-buzz",
+      "type": "corner",
+      "genre": "hot_topics",
+      "title": "🔥 今バズってる話題",
+      "audioFile": "corner-buzz.mp3",
+      "estimatedDuration": 240
+    },
+    {
+      "id": "corner-politics",
+      "type": "corner",
+      "genre": "politics",
+      "title": "🏛️ 政治ニュース",
+      "audioFile": "corner-politics.mp3",
+      "estimatedDuration": 210
+    },
+    {
+      "id": "corner-economy",
+      "type": "corner",
+      "genre": "economy",
+      "title": "💹 経済・マネー",
+      "audioFile": "corner-economy.mp3",
+      "estimatedDuration": 210
+    },
+    {
+      "id": "corner-lifestyle",
+      "type": "corner",
+      "genre": "lifestyle",
+      "title": "🏠 暮らし・生活",
+      "audioFile": "corner-lifestyle.mp3",
+      "estimatedDuration": 210
+    },
+    {
+      "id": "corner-entertainment",
+      "type": "corner",
+      "genre": "entertainment",
+      "title": "🎬 エンタメ",
+      "audioFile": "corner-entertainment.mp3",
+      "estimatedDuration": 210
+    },
+    {
+      "id": "corner-science",
+      "type": "corner",
+      "genre": "science",
+      "title": "🔬 科学・テクノロジー",
+      "audioFile": "corner-science.mp3",
+      "estimatedDuration": 225
+    },
+    {
+      "id": "corner-international",
+      "type": "corner",
+      "genre": "international",
+      "title": "🌍 国際ニュース",
+      "audioFile": "corner-international.mp3",
+      "estimatedDuration": 210
+    },
+    {
+      "id": "ending",
+      "type": "ending",
+      "title": "エンディング",
+      "audioFile": "ending.mp3",
+      "estimatedDuration": 30
+    }
+  ]
+}

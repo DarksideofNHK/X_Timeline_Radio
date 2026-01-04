@@ -1,0 +1,119 @@
+{
+  "ruling-ldp": [
+    {
+      "name": "石破茂",
+      "username": "shigeruishiba",
+      "role": "自民党総裁・衆議院議員"
+    },
+    {
+      "name": "小泉進次郎",
+      "username": "shinjirokoiz",
+      "role": "自民党衆議院議員・環境大臣"
+    },
+    {
+      "name": "岸田文雄",
+      "username": "kishida230",
+      "role": "元自民党総裁・元内閣総理大臣"
+    },
+    {
+      "name": "河野太郎",
+      "username": "konotarogomame",
+      "role": "自民党衆議院議員"
+    },
+    {
+      "name": "加藤勝信",
+      "username": "KatsunobuKato1",
+      "role": "自民党衆議院議員・元財務大臣"
+    },
+    {
+      "name": "小野寺五典",
+      "username": "itsunori510",
+      "role": "自民党衆議院議員・税調会長"
+    },
+    {
+      "name": "高市早苗",
+      "username": "takaichi_sanae",
+      "role": "自民党衆議院議員"
+    }
+  ],
+  "ruling-komeito": [
+    {
+      "name": "石井啓一",
+      "username": "keiichi_ishii_",
+      "role": "公明党常任顧問・元国土交通大臣"
+    }
+  ],
+  "opposition-cdp": [
+    {
+      "name": "原口一博",
+      "username": "kharaguchi",
+      "role": "立憲民主党衆議院議員"
+    },
+    {
+      "name": "小川淳也",
+      "username": "junyaog",
+      "role": "立憲民主党衆議院議員"
+    },
+    {
+      "name": "野田佳彦",
+      "username": "NODAYOSHI55",
+      "role": "立憲民主党代表"
+    }
+  ],
+  "opposition-ishin": [
+    {
+      "name": "馬場伸幸",
+      "username": "baba_ishin",
+      "role": "日本維新の会衆議院議員"
+    },
+    {
+      "name": "前原誠司",
+      "username": "Maehara2016",
+      "role": "日本維新の会衆議院議員"
+    },
+    {
+      "name": "吉村洋文",
+      "username": "hiroyoshimura",
+      "role": "日本維新の会代表"
+    },
+    {
+      "name": "藤田文武",
+      "username": "fumi_fuji",
+      "role": "日本維新の会共同代表"
+    }
+  ],
+  "opposition-dpfp": [
+    {
+      "name": "玉木雄一郎",
+      "username": "tamakiyuichiro",
+      "role": "国民民主党代表"
+    },
+    {
+      "name": "古川元久",
+      "username": "Fullgen",
+      "role": "国民民主党代表代行・衆議院議員"
+    },
+    {
+      "name": "大塚耕平",
+      "username": "kouhei1005mon",
+      "role": "国民民主党元参議院議員"
+    }
+  ],
+  "opposition-others": [
+    {
+      "name": "志位和夫",
+      "username": "shiikazuo",
+      "role": "日本共産党議長・衆議院議員"
+    },
+    {
+      "name": "田村智子",
+      "username": "tamutomojcp",
+      "role": "日本共産党委員長・衆議院議員"
+    },
+    {
+      "name": "神谷宗幣",
+      "username": "jinkamiya",
+      "role": "参政党代表・参議院議員"
+    }
+  ]
+}

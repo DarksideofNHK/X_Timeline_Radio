@@ -1283,27 +1283,31 @@ export const useStore = create<AppState>()(
               set({ collectedAnnotations: cache.annotations });
             }
           } else {
-            // 全ジャンルのPostを並行収集
+            const { showType } = audioSettings;
             const allAnnotations: RelatedPost[] = [];
 
-            const { showType } = audioSettings;
-            const collectPromises = PROGRAM_SEGMENTS.map(async (genre) => {
+            // showTypeが設定されていて、レガシーでない場合は1回のAPI呼び出しで全ジャンル取得
+            if (showType && showType !== 'x-timeline-radio') {
+              console.log(`[AIProgram] Collecting posts for showType: ${showType}`);
               try {
                 const response = await fetch('/api/collect-posts', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
-                    genre,
                     apiKey: apiConfig.grokApiKey,
-                    showType, // 番組タイプを渡す
+                    showType,
                   }),
                 });
 
                 if (!response.ok) {
-                  throw new Error(`Failed to collect posts for ${genre}`);
+                  const errorText = await response.text();
+                  throw new Error(`Failed to collect posts: ${errorText.slice(0, 100)}`);
                 }
 
                 const data = await response.json();
+                // postsはRecord<genreId, BuzzPost[]>形式で返ってくる
+                allPosts = (data.posts || {}) as Record<Genre, BuzzPost[]>;
+
                 // annotationsを収集
                 if (data.annotations && Array.isArray(data.annotations)) {
                   for (const ann of data.annotations) {
@@ -1312,18 +1316,51 @@ export const useStore = create<AppState>()(
                     }
                   }
                 }
-                return { genre, posts: data.posts as BuzzPost[] };
-              } catch (e) {
-                console.error(`[AIProgram] Error collecting ${genre}:`, e);
-                return { genre, posts: [] };
-              }
-            });
 
-            const results = await Promise.all(collectPromises);
-            allPosts = {} as Record<Genre, BuzzPost[]>;
-            results.forEach((r) => {
-              allPosts[r.genre] = r.posts;
-            });
+                console.log(`[AIProgram] Collected posts for ${Object.keys(allPosts).length} genres`);
+              } catch (e: any) {
+                console.error('[AIProgram] Error collecting posts:', e);
+                throw new Error(`投稿の収集に失敗しました: ${e.message}`);
+              }
+            } else {
+              // レガシー: 各ジャンルを並行収集
+              const collectPromises = PROGRAM_SEGMENTS.map(async (genre) => {
+                try {
+                  const response = await fetch('/api/collect-posts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      genre,
+                      apiKey: apiConfig.grokApiKey,
+                    }),
+                  });
+
+                  if (!response.ok) {
+                    throw new Error(`Failed to collect posts for ${genre}`);
+                  }
+
+                  const data = await response.json();
+                  // annotationsを収集
+                  if (data.annotations && Array.isArray(data.annotations)) {
+                    for (const ann of data.annotations) {
+                      if (!allAnnotations.some(a => a.statusId === ann.statusId)) {
+                        allAnnotations.push(ann);
+                      }
+                    }
+                  }
+                  return { genre, posts: data.posts as BuzzPost[] };
+                } catch (e) {
+                  console.error(`[AIProgram] Error collecting ${genre}:`, e);
+                  return { genre, posts: [] };
+                }
+              });
+
+              const results = await Promise.all(collectPromises);
+              allPosts = {} as Record<Genre, BuzzPost[]>;
+              results.forEach((r) => {
+                allPosts[r.genre] = r.posts;
+              });
+            }
 
             // キャッシュに保存（annotationsも含む）
             savePostsCache(allPosts, allAnnotations);

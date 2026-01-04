@@ -1,0 +1,6 @@
+file 'opening.mp3'
+file 'ruling-party.mp3'
+file 'opposition.mp3'
+file 'clash.mp3'
+file 'public-voice.mp3'
+file 'ending.mp3'

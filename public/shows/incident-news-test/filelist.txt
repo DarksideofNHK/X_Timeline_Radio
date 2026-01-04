@@ -1,0 +1,5 @@
+file 'opening.mp3'
+file 'crime-news.mp3'
+file 'accident-news.mp3'
+file 'other-news.mp3'
+file 'ending.mp3'
