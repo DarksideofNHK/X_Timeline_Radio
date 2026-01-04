@@ -88,16 +88,106 @@ export default function App() {
       {/* 固定ヘッダー（タイトル + プレイヤー） */}
       <header className="bg-bg-card border-b border-border-light sticky top-0 z-20 shadow-sm">
         {/* タイトル行 */}
-        <div className="p-4 border-b border-border-light">
-          <div className="max-w-4xl mx-auto flex items-center justify-between">
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <span className="text-3xl">🎙️</span>
-              X Timeline Radio
-              <span className="text-sm font-normal text-text-secondary">v2</span>
-            </h1>
-            <div className="flex items-center gap-2">
-              {/* モード切り替え（番組がある時に表示） */}
-              {hasProgramContent && (
+        <div className="p-3 md:p-4 border-b border-border-light">
+          <div className="max-w-4xl mx-auto">
+            {/* 上段: タイトル */}
+            <div className="flex items-center justify-between mb-2 md:mb-0">
+              <h1 className="text-lg md:text-2xl font-bold flex items-center gap-1 md:gap-2">
+                <span className="text-2xl md:text-3xl">🎙️</span>
+                <span className="hidden sm:inline">X Timeline Radio</span>
+                <span className="sm:hidden">X Radio</span>
+                <span className="text-xs md:text-sm font-normal text-text-secondary">v2</span>
+              </h1>
+              {/* PC用: 横並びボタン */}
+              <div className="hidden md:flex items-center gap-2">
+                {/* モード切り替え */}
+                {hasProgramContent && (
+                  <div className="flex rounded-lg overflow-hidden border border-border-light">
+                    <button
+                      onClick={() => {
+                        if (isAIMode) {
+                          stopPlayback();
+                          setAudioSettings({ programMode: 'simple' });
+                        }
+                      }}
+                      className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+                        !isAIMode
+                          ? 'bg-accent text-white'
+                          : 'bg-bg-menu text-text-secondary hover:bg-hover-bg'
+                      }`}
+                    >
+                      📻 シンプル
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (!isAIMode) {
+                          stopPlayback();
+                          setAudioSettings({ programMode: 'ai-script' });
+                        }
+                      }}
+                      className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+                        isAIMode
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-bg-menu text-text-secondary hover:bg-hover-bg'
+                      }`}
+                    >
+                      🎙️ AI番組
+                    </button>
+                  </div>
+                )}
+                {/* X投稿確認ボタン */}
+                {hasProgramContent && (
+                  <button
+                    onClick={() => {
+                      if (isAIMode) {
+                        setShowPosts(!showPosts);
+                      } else {
+                        setShowPlaylist(!showPlaylist);
+                      }
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                      (isAIMode ? showPosts : showPlaylist)
+                        ? 'bg-accent text-white'
+                        : 'bg-bg-menu text-text-secondary hover:bg-hover-bg border border-border-light'
+                    }`}
+                  >
+                    📋 X投稿表示
+                  </button>
+                )}
+                {/* X情報再取得ボタン */}
+                {hasProgramContent && (
+                  <button
+                    onClick={() => {
+                      if (confirm('キャッシュをクリアして再度情報を取得します。よろしいですか？')) {
+                        setShowPlaylist(false);
+                        setShowPosts(false);
+                        refreshProgram();
+                      }
+                    }}
+                    className="px-3 py-1.5 bg-bg-menu hover:bg-hover-bg rounded-lg text-sm font-medium text-text-secondary border border-border-light transition-colors"
+                  >
+                    🔄 再取得
+                  </button>
+                )}
+                {/* リセットボタン */}
+                {hasProgramContent && (
+                  <button
+                    onClick={() => {
+                      setShowPlaylist(false);
+                      setShowPosts(false);
+                      reset();
+                    }}
+                    className="px-3 py-1.5 bg-bg-menu hover:bg-hover-bg rounded-lg text-sm font-medium text-text-secondary border border-border-light transition-colors"
+                  >
+                    リセット
+                  </button>
+                )}
+              </div>
+            </div>
+            {/* スマホ用: 折り返しボタン */}
+            {hasProgramContent && (
+              <div className="flex md:hidden flex-wrap gap-1.5 mt-2">
+                {/* モード切り替え */}
                 <div className="flex rounded-lg overflow-hidden border border-border-light">
                   <button
                     onClick={() => {
@@ -106,13 +196,13 @@ export default function App() {
                         setAudioSettings({ programMode: 'simple' });
                       }
                     }}
-                    className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+                    className={`px-2 py-1 text-xs font-medium transition-colors ${
                       !isAIMode
                         ? 'bg-accent text-white'
-                        : 'bg-bg-menu text-text-secondary hover:bg-hover-bg'
+                        : 'bg-bg-menu text-text-secondary'
                     }`}
                   >
-                    📻 シンプル
+                    📻
                   </button>
                   <button
                     onClick={() => {
@@ -121,18 +211,16 @@ export default function App() {
                         setAudioSettings({ programMode: 'ai-script' });
                       }
                     }}
-                    className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+                    className={`px-2 py-1 text-xs font-medium transition-colors ${
                       isAIMode
                         ? 'bg-purple-600 text-white'
-                        : 'bg-bg-menu text-text-secondary hover:bg-hover-bg'
+                        : 'bg-bg-menu text-text-secondary'
                     }`}
                   >
-                    🎙️ AI番組
+                    🎙️
                   </button>
                 </div>
-              )}
-              {/* X投稿確認ボタン（両モード共通） */}
-              {hasProgramContent && (
+                {/* X投稿表示 */}
                 <button
                   onClick={() => {
                     if (isAIMode) {
@@ -141,44 +229,40 @@ export default function App() {
                       setShowPlaylist(!showPlaylist);
                     }
                   }}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  className={`px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
                     (isAIMode ? showPosts : showPlaylist)
                       ? 'bg-accent text-white'
-                      : 'bg-bg-menu text-text-secondary hover:bg-hover-bg border border-border-light'
+                      : 'bg-bg-menu text-text-secondary border border-border-light'
                   }`}
                 >
-                  📋 X投稿表示
+                  📋
                 </button>
-              )}
-              {/* X情報再取得ボタン */}
-              {hasProgramContent && (
+                {/* 再取得 */}
                 <button
                   onClick={() => {
-                    if (confirm('キャッシュをクリアして再度情報を取得します。よろしいですか？')) {
+                    if (confirm('キャッシュをクリアして再取得しますか？')) {
                       setShowPlaylist(false);
                       setShowPosts(false);
                       refreshProgram();
                     }
                   }}
-                  className="px-3 py-1.5 bg-bg-menu hover:bg-hover-bg rounded-lg text-sm font-medium text-text-secondary border border-border-light transition-colors"
+                  className="px-2 py-1 bg-bg-menu rounded-lg text-xs font-medium text-text-secondary border border-border-light"
                 >
-                  🔄 X情報再取得
+                  🔄
                 </button>
-              )}
-              {/* リセットボタン */}
-              {hasProgramContent && (
+                {/* リセット */}
                 <button
                   onClick={() => {
                     setShowPlaylist(false);
                     setShowPosts(false);
                     reset();
                   }}
-                  className="px-3 py-1.5 bg-bg-menu hover:bg-hover-bg rounded-lg text-sm font-medium text-text-secondary border border-border-light transition-colors"
+                  className="px-2 py-1 bg-bg-menu rounded-lg text-xs font-medium text-text-secondary border border-border-light"
                 >
-                  リセット
+                  ✕
                 </button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
 
