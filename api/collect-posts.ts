@@ -31,15 +31,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const { genre, showType, apiKey } = req.body;
 
-    console.log(`[CollectPosts] Request: showType=${showType}, genre=${genre}`);
-
-    if (!apiKey) {
-      return res.status(400).json({ error: 'API key is required' });
-    }
-
     // 新形式: showTypeが指定された場合
     if (showType && SHOW_TYPES[showType]) {
-      console.log(`[CollectPosts] Using showType mode: ${showType}`);
       const show = SHOW_TYPES[showType];
       const allPosts: Record<string, any[]> = {};
       const allAnnotations: any[] = [];
@@ -89,11 +82,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   } catch (error: any) {
     console.error('[API] Error collecting posts:', error);
-    console.error('[API] Error stack:', error.stack);
-    return res.status(500).json({
-      error: error.message || 'Unknown error',
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
+    return res.status(500).json({ error: error.message });
   }
 }
 
