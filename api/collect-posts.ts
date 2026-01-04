@@ -6,14 +6,57 @@ const GROK_API_URL = 'https://api.x.ai/v1/responses';
 const INLINE_SHOW_TYPES: Record<string, { name: string; genres: Array<{ id: string; name: string; icon: string; query: string; camp?: string }> }> = {
   'politician-watch': {
     name: 'X政治家ウオッチ',
+    // 2026年1月時点: 高市早苗内閣
     genres: [
-      { id: 'ruling-ldp', name: '自民党', icon: '🔴', query: '', camp: '与党' },
-      { id: 'ruling-komeito', name: '公明党', icon: '🟡', query: '', camp: '与党' },
-      { id: 'opposition-cdp', name: '立憲民主党', icon: '🔵', query: '', camp: '野党' },
-      { id: 'opposition-ishin', name: '日本維新の会', icon: '🟢', query: '', camp: '野党' },
-      { id: 'opposition-dpfp', name: '国民民主党', icon: '🟠', query: '', camp: '野党' },
-      { id: 'opposition-others', name: 'その他野党', icon: '🟣', query: '', camp: '野党' },
-      { id: 'public-reaction', name: '国民の声', icon: '👥', query: '', camp: '一般' },
+      {
+        id: 'ruling-ldp',
+        name: '自民党',
+        icon: '🔴',
+        query: '(from:takaichi_sanae OR from:jimin_koho OR 高市早苗 OR 自民党 OR 鈴木俊一 OR 麻生太郎 OR 小泉進次郎 OR 小野田紀美) (政策 OR 発言 OR 批判 OR 主張)',
+        camp: '与党'
+      },
+      {
+        id: 'ruling-komeito',
+        name: '公明党',
+        icon: '🟡',
+        query: '(from:komei_koho OR 公明党 OR 斎藤健) (政策 OR 発言 OR 主張)',
+        camp: '与党'
+      },
+      {
+        id: 'opposition-cdp',
+        name: '立憲民主党',
+        icon: '🔵',
+        query: '(from:NODAYOSHI55 OR from:CDP2017 OR 立憲民主党 OR 立憲 OR 野田佳彦 OR 蓮舫 OR 辻元清美) (政策 OR 批判 OR 主張)',
+        camp: '野党'
+      },
+      {
+        id: 'opposition-ishin',
+        name: '日本維新の会',
+        icon: '🟢',
+        query: '(from:hiroyoshimura OR from:osaka_ishin OR 維新 OR 日本維新の会 OR 吉村洋文) (政策 OR 発言 OR 主張)',
+        camp: '野党'
+      },
+      {
+        id: 'opposition-dpfp',
+        name: '国民民主党',
+        icon: '🟠',
+        query: '(from:tamakiyuichiro OR from:DPFPnews OR 国民民主党 OR 玉木雄一郎) (政策 OR 発言 OR 主張)',
+        camp: '野党'
+      },
+      {
+        id: 'opposition-others',
+        name: 'その他野党',
+        icon: '🟣',
+        query: '(from:tamutomojcp OR from:jcp_cc OR from:reiwashinsen OR from:jinkamiya OR 共産党 OR 田村智子 OR れいわ新選組 OR 山本太郎 OR 参政党 OR 神谷宗幣) (政策 OR 発言 OR 主張)',
+        camp: '野党'
+      },
+      {
+        id: 'public-reaction',
+        name: '国民の声',
+        icon: '👥',
+        query: '(高市内閣 OR 高市政権 OR 与党 OR 野党 OR 国会) (批判 OR 支持 OR おかしい OR 反対 OR 賛成)',
+        camp: '一般'
+      },
     ],
   },
   'old-media-buster': {
@@ -60,18 +103,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const allPosts: Record<string, any[]> = {};
       const allAnnotations: any[] = [];
 
-      // 政治家ウオッチの場合は2段階アプローチ
+      // 政治家ウオッチ用の特別な収集プロンプト
       if (showType === 'politician-watch') {
-        const accounts = await fetchPoliticianAccounts(apiKey);
-
-        // 各政党のPost収集を並列実行
         const collectPromises = show.genres.map(async (genreConfig) => {
-          const posts = await collectPoliticianPosts(genreConfig, accounts, apiKey);
-          return { id: genreConfig.id, posts };
+          const { posts, annotations } = await collectPoliticianPostsSimple(genreConfig, apiKey);
+          return { id: genreConfig.id, posts, annotations };
         });
         const results = await Promise.all(collectPromises);
         for (const result of results) {
           allPosts[result.id] = result.posts;
+          allAnnotations.push(...result.annotations);
         }
       } else {
         // オールドメディア等：汎用収集を並列実行
@@ -109,7 +150,79 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 }
 
-// 政治家アカウントリストを取得
+// 政治家Post収集（シンプル版 - キーワードベース）
+async function collectPoliticianPostsSimple(
+  genreConfig: { id: string; name: string; query: string; camp?: string },
+  apiKey: string
+): Promise<{ posts: any[]; annotations: any[] }> {
+  const now = new Date();
+  const fromDate = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const toDate = now.toISOString().split('T')[0];
+
+  const prompt = `
+あなたは日本の政治に詳しいXキュレーターです。
+
+【番組】X政治家ウオッチ
+【収集対象】${genreConfig.name}（${genreConfig.camp || ''}）に関する投稿
+【検索クエリ】${genreConfig.query}
+【条件】直近24時間以内の日本語Post
+
+【収集の優先順位】
+1. 政治家本人のX投稿（公式アカウント）
+2. 政策に対する明確なスタンス表明
+3. 他党・他議員への批判や反論
+4. 注目を集めている発言やニュース
+
+【出力形式】
+\`\`\`json
+{
+  "posts": [
+    {
+      "author_username": "ユーザー名",
+      "author_name": "表示名（政治家名・役職など）",
+      "party": "${genreConfig.name}",
+      "text": "投稿内容",
+      "url": "https://x.com/username/status/投稿ID",
+      "likes": 数値,
+      "retweets": 数値,
+      "stance": "主張/批判/反論/提案など",
+      "topic": "言及トピック"
+    }
+  ]
+}
+\`\`\`
+
+10件出力。実在する投稿のみを返してください。架空の投稿は絶対に作成しないでください。`;
+
+  try {
+    const response = await fetch(GROK_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'grok-4-1-fast-reasoning',
+        tools: [{ type: 'x_search', x_search: { from_date: fromDate, to_date: toDate } }],
+        input: prompt,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error(`[PoliticianSimple ${genreConfig.id}] API error: ${response.status}`);
+      throw new Error(`Grok API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log(`[PoliticianSimple ${genreConfig.id}] Got response`);
+    return extractPostsFromResponse(data, genreConfig.id);
+  } catch (error) {
+    console.error(`[PoliticianSimple ${genreConfig.id}] Error:`, error);
+    return { posts: [], annotations: [] };
+  }
+}
+
+// 政治家アカウントリストを取得（レガシー - 現在未使用）
 async function fetchPoliticianAccounts(apiKey: string): Promise<Record<string, any[]>> {
   const prompt = `あなたは日本の政治に詳しい専門家です。
 
