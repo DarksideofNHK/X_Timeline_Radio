@@ -11,8 +11,8 @@ function isMobileBrowser(): boolean {
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 }
 
-// モバイル用音量補正 (-8dB ≈ 0.4倍)
-const MOBILE_VOLUME_MULTIPLIER = 0.4;
+// モバイル用音量補正 (-14dB ≈ 0.2倍)
+const MOBILE_VOLUME_MULTIPLIER = 0.2;
 
 // デフォルトBGM設定
 const DEFAULT_BGM = {
