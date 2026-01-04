@@ -1,9 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { SHOW_TYPES, type ShowType, type Genre } from './show-types';
 
 const GROK_API_URL = 'https://api.x.ai/v1/responses';
 
-// ジャンル定義
-const GENRES = [
+// レガシー: X Timeline Radio用ジャンル（後方互換性）
+const LEGACY_GENRES = [
   { id: 'trending', name: '今バズってる話題', query: '直近数時間で急激に拡散されているPost' },
   { id: 'politics', name: '政治ニュース', query: '政治、国会、選挙、政党、政策に関するPost' },
   { id: 'economy', name: '経済・マネー', query: '株価、為替、投資、企業業績、経済ニュースに関するPost' },
@@ -28,57 +29,187 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { genre, apiKey } = req.body;
+    const { genre, showType, apiKey } = req.body;
 
-    const genreConfig = GENRES.find((g) => g.id === genre);
+    // 新形式: showTypeが指定された場合
+    if (showType && SHOW_TYPES[showType]) {
+      const show = SHOW_TYPES[showType];
+      const allPosts: Record<string, any[]> = {};
+      const allAnnotations: any[] = [];
+
+      // 政治家ウオッチの場合は2段階アプローチ
+      if (showType === 'politician-watch') {
+        const accounts = await fetchPoliticianAccounts(apiKey);
+
+        for (const genreConfig of show.genres) {
+          const posts = await collectPoliticianPosts(genreConfig, accounts, apiKey);
+          allPosts[genreConfig.id] = posts;
+        }
+      } else {
+        // その他の番組
+        for (const genreConfig of show.genres) {
+          const { posts, annotations } = await collectPostsForGenre(genreConfig, show, apiKey);
+          allPosts[genreConfig.id] = posts;
+          allAnnotations.push(...annotations);
+        }
+      }
+
+      return res.status(200).json({
+        posts: allPosts,
+        showType,
+        showName: show.name,
+        annotations: allAnnotations
+      });
+    }
+
+    // レガシー形式: genre のみ指定
+    const genreConfig = LEGACY_GENRES.find((g) => g.id === genre);
     if (!genreConfig) {
       return res.status(400).json({ error: `Unknown genre: ${genre}` });
     }
 
-    // 日付範囲（過去6時間）
-    const now = new Date();
-    const fromDate = new Date(now.getTime() - 6 * 60 * 60 * 1000).toISOString().split('T')[0];
-    const toDate = now.toISOString().split('T')[0];
+    const { posts, annotations } = await collectLegacyPosts(genreConfig, apiKey);
+    return res.status(200).json({ posts, genre, annotations });
 
-    const prompt = `
-あなたはXのバズ投稿キュレーターです。
+  } catch (error: any) {
+    console.error('[API] Error collecting posts:', error);
+    return res.status(500).json({ error: error.message });
+  }
+}
 
-【検索条件】
-- ジャンル: ${genreConfig.name}
-- 条件: ${genreConfig.query}
-- 直近6時間以内に投稿された日本語のPost
-- 以下の「盛り上がり指標」が高いものを優先:
-  1. いいね数が多い（100以上推奨）
-  2. リツイート/引用が多い
-  3. リプライが活発（議論になっている）
-  4. 短時間で急激に伸びている
+// 政治家アカウントリストを取得
+async function fetchPoliticianAccounts(apiKey: string): Promise<Record<string, any[]>> {
+  const prompt = `あなたは日本の政治に詳しい専門家です。
+
+【タスク】
+日本の主要政党の国会議員・幹部のXアカウントを調べてください。
+
+【対象政党】
+1. 自民党（与党）- 総裁、幹事長、政調会長、大臣、有力議員
+2. 公明党（与党）- 代表、幹事長、有力議員
+3. 立憲民主党（野党）- 代表、幹事長、有力議員
+4. 日本維新の会（野党）- 代表、共同代表、有力議員
+5. 国民民主党（野党）- 代表、有力議員
+6. その他野党 - 共産党、れいわ新選組、社民党、参政党の代表・有力議員
 
 【出力形式】
-以下のJSON形式で10件出力してください:
+\`\`\`json
+{
+  "ruling-ldp": [{ "name": "政治家名", "username": "Xユーザー名", "role": "役職" }],
+  "ruling-komeito": [...],
+  "opposition-cdp": [...],
+  "opposition-ishin": [...],
+  "opposition-dpfp": [...],
+  "opposition-others": [...]
+}
+\`\`\`
 
+各政党5-10名、アクティブに発信している政治家を優先。`;
+
+  try {
+    const response = await fetch(GROK_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'grok-4-1-fast-reasoning',
+        tools: [{ type: 'x_search' }],
+        input: prompt,
+      }),
+    });
+
+    if (!response.ok) throw new Error(`Grok API error: ${response.status}`);
+
+    const data = await response.json();
+    const fullText = extractTextFromResponse(data);
+
+    // JSON抽出
+    let jsonText = '';
+    const jsonBlockMatch = fullText.match(/```json\s*([\s\S]*?)```/);
+    if (jsonBlockMatch) {
+      jsonText = jsonBlockMatch[1].trim();
+    } else if (fullText.includes('"ruling-ldp"')) {
+      const startIdx = fullText.indexOf('{');
+      const endIdx = fullText.lastIndexOf('}');
+      if (startIdx !== -1 && endIdx > startIdx) {
+        jsonText = fullText.slice(startIdx, endIdx + 1);
+      }
+    }
+
+    if (jsonText) {
+      return JSON.parse(jsonText);
+    }
+  } catch (error) {
+    console.error('[Accounts] Error:', error);
+  }
+
+  return {};
+}
+
+// 政治家Post収集
+async function collectPoliticianPosts(
+  genreConfig: Genre,
+  accounts: Record<string, any[]>,
+  apiKey: string
+): Promise<any[]> {
+  // 国民の声は別処理
+  if (genreConfig.id === 'public-reaction') {
+    return collectPublicReaction(apiKey);
+  }
+
+  const partyAccounts = accounts[genreConfig.id] || [];
+  if (partyAccounts.length === 0) return [];
+
+  const accountList = partyAccounts.map((a: any) => `@${a.username}（${a.name}/${a.role}）`).join('\n');
+  const usernameQuery = partyAccounts.map((a: any) => `from:${a.username}`).join(' OR ');
+
+  const now = new Date();
+  const fromDate = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const toDate = now.toISOString().split('T')[0];
+
+  const prompt = `
+あなたは日本の政治家のX投稿を分析する専門家です。
+
+【検索対象アカウント】
+${accountList}
+
+【検索クエリ】
+${usernameQuery}
+
+【検索条件】
+- 政党: ${genreConfig.name}（${genreConfig.camp}）
+- 直近24時間以内の日本語Post
+
+【収集の優先順位】
+1. 政策に対する明確なスタンス表明
+2. 他党・他議員への批判や反論
+3. 重要法案・政策への賛否
+4. 注目を集めている発言
+
+【出力形式】
 \`\`\`json
 {
   "posts": [
     {
-      "author_username": "実際のユーザー名",
-      "author_name": "表示名",
-      "text": "投稿内容（280文字以内）",
+      "author_username": "ユーザー名",
+      "author_name": "政治家名（役職）",
+      "party": "${genreConfig.name}",
+      "text": "投稿内容",
       "url": "https://x.com/username/status/投稿ID",
       "likes": 数値,
       "retweets": 数値,
-      "replies": 数値,
-      "buzz_reason": "なぜバズっているか一言"
+      "stance": "主張/批判/反論/提案など",
+      "topic": "言及トピック"
     }
   ]
 }
 \`\`\`
 
-【重要】
-- 必ず実在するPostのURLを含めてください
-- 架空の投稿を作成しないでください
-- URLは必ず https://x.com/ユーザー名/status/数字 の形式で
-`;
+10件出力。実在するPostのみ。`;
 
+  try {
     const response = await fetch(GROK_API_URL, {
       method: 'POST',
       headers: {
@@ -92,32 +223,208 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }),
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Grok API error: ${response.status} - ${errorText}`);
-    }
+    if (!response.ok) throw new Error(`Grok API error: ${response.status}`);
 
     const data = await response.json();
-    const { posts, annotations } = extractPostsFromResponse(data, genre);
-
-    return res.status(200).json({ posts, genre, annotations });
-  } catch (error: any) {
-    console.error('[API] Error collecting posts:', error);
-    return res.status(500).json({ error: error.message });
+    return extractPostsFromResponse(data, genreConfig.id).posts;
+  } catch (error) {
+    console.error(`[Collect ${genreConfig.id}] Error:`, error);
+    return [];
   }
 }
 
-interface RelatedPost {
-  url: string;
-  statusId: string;
+// 国民の声収集
+async function collectPublicReaction(apiKey: string): Promise<any[]> {
+  const now = new Date();
+  const fromDate = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const toDate = now.toISOString().split('T')[0];
+
+  const prompt = `
+あなたは日本の政治に関する一般市民の声を収集する専門家です。
+
+【検索条件】
+- 直近24時間以内の日本語Post
+- 一般ユーザー（政治家・メディア以外）の投稿
+- 政治家や政策に対する意見・反応
+
+【収集の優先順位】
+1. 政治家の発言への賛否コメント
+2. 政策・法案への一般市民の意見
+3. 話題になっている政治ニュースへの反応
+
+【バランス】
+賛成意見と反対意見を半々程度で
+
+【出力形式】
+\`\`\`json
+{
+  "posts": [
+    {
+      "author_username": "ユーザー名",
+      "author_name": "表示名",
+      "party": "一般市民",
+      "text": "投稿内容",
+      "url": "https://x.com/username/status/投稿ID",
+      "likes": 数値,
+      "stance": "賛成/反対/疑問など",
+      "topic": "言及トピック"
+    }
+  ]
+}
+\`\`\`
+
+10件出力。`;
+
+  try {
+    const response = await fetch(GROK_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'grok-4-1-fast-reasoning',
+        tools: [{ type: 'x_search', x_search: { from_date: fromDate, to_date: toDate } }],
+        input: prompt,
+      }),
+    });
+
+    if (!response.ok) throw new Error(`Grok API error: ${response.status}`);
+
+    const data = await response.json();
+    return extractPostsFromResponse(data, 'public-reaction').posts;
+  } catch (error) {
+    console.error('[PublicReaction] Error:', error);
+    return [];
+  }
 }
 
-function extractPostsFromResponse(data: any, genre: string): { posts: any[]; annotations: RelatedPost[] } {
-  const posts: any[] = [];
-  const allAnnotations: RelatedPost[] = [];
-  let fullText = '';
+// 汎用Post収集（ガバメントウオッチ、その他番組用）
+async function collectPostsForGenre(
+  genreConfig: Genre,
+  show: ShowType,
+  apiKey: string
+): Promise<{ posts: any[]; annotations: any[] }> {
+  const now = new Date();
+  const fromDate = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const toDate = now.toISOString().split('T')[0];
 
-  // output配列からテキストを抽出
+  const prompt = `
+あなたはXの投稿キュレーターです。
+
+【番組】${show.name}
+【ジャンル】${genreConfig.name}
+【検索クエリ】${genreConfig.query}
+【条件】直近24時間以内の日本語Post
+
+【出力形式】
+\`\`\`json
+{
+  "posts": [
+    {
+      "author_username": "ユーザー名",
+      "author_name": "表示名",
+      "text": "投稿内容",
+      "url": "https://x.com/username/status/投稿ID",
+      "likes": 数値,
+      "retweets": 数値,
+      "summary": "内容の要約"
+    }
+  ]
+}
+\`\`\`
+
+10件出力。実在するPostのみ。`;
+
+  try {
+    const response = await fetch(GROK_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'grok-4-1-fast-reasoning',
+        tools: [{ type: 'x_search', x_search: { from_date: fromDate, to_date: toDate } }],
+        input: prompt,
+      }),
+    });
+
+    if (!response.ok) throw new Error(`Grok API error: ${response.status}`);
+
+    const data = await response.json();
+    return extractPostsFromResponse(data, genreConfig.id);
+  } catch (error) {
+    console.error(`[Collect ${genreConfig.id}] Error:`, error);
+    return { posts: [], annotations: [] };
+  }
+}
+
+// レガシーPost収集（X Timeline Radio用）
+async function collectLegacyPosts(
+  genreConfig: { id: string; name: string; query: string },
+  apiKey: string
+): Promise<{ posts: any[]; annotations: any[] }> {
+  const now = new Date();
+  const fromDate = new Date(now.getTime() - 6 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const toDate = now.toISOString().split('T')[0];
+
+  const prompt = `
+あなたはXのバズ投稿キュレーターです。
+
+【検索条件】
+- ジャンル: ${genreConfig.name}
+- 条件: ${genreConfig.query}
+- 直近6時間以内に投稿された日本語のPost
+- いいね数100以上推奨
+
+【出力形式】
+\`\`\`json
+{
+  "posts": [
+    {
+      "author_username": "ユーザー名",
+      "author_name": "表示名",
+      "text": "投稿内容",
+      "url": "https://x.com/username/status/投稿ID",
+      "likes": 数値,
+      "retweets": 数値,
+      "replies": 数値,
+      "buzz_reason": "なぜバズっているか"
+    }
+  ]
+}
+\`\`\`
+
+10件出力。実在するPostのみ。`;
+
+  try {
+    const response = await fetch(GROK_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'grok-4-1-fast-reasoning',
+        tools: [{ type: 'x_search', x_search: { from_date: fromDate, to_date: toDate } }],
+        input: prompt,
+      }),
+    });
+
+    if (!response.ok) throw new Error(`Grok API error: ${response.status}`);
+
+    const data = await response.json();
+    return extractPostsFromResponse(data, genreConfig.id);
+  } catch (error) {
+    console.error(`[Legacy ${genreConfig.id}] Error:`, error);
+    return { posts: [], annotations: [] };
+  }
+}
+
+// レスポンスからテキスト抽出
+function extractTextFromResponse(data: any): string {
+  let fullText = '';
   if (data.output && Array.isArray(data.output)) {
     for (const item of data.output) {
       if (item.type === 'message' && item.content && Array.isArray(item.content)) {
@@ -129,13 +436,19 @@ function extractPostsFromResponse(data: any, genre: string): { posts: any[]; ann
       }
     }
   }
-
-  // フォールバック
-  if (!fullText && data.text && typeof data.text === 'string') {
+  if (!fullText && data.text) {
     fullText = data.text;
   }
+  return fullText;
+}
 
-  // JSONを抽出
+// レスポンスからPost抽出
+function extractPostsFromResponse(data: any, genre: string): { posts: any[]; annotations: any[] } {
+  const posts: any[] = [];
+  const allAnnotations: any[] = [];
+  const fullText = extractTextFromResponse(data);
+
+  // JSON抽出
   let jsonText = '';
   const jsonBlockMatch = fullText.match(/```json\s*([\s\S]*?)```/);
   if (jsonBlockMatch) {
@@ -169,17 +482,21 @@ function extractPostsFromResponse(data: any, genre: string): { posts: any[]; ann
           id: postId,
           author: {
             id: p.author_username || p.username || 'unknown',
-            name: p.author_name || p.name || p.author_username || p.username || 'ユーザー',
+            name: p.author_name || p.name || 'ユーザー',
             username: p.author_username || p.username || 'unknown',
           },
           text: p.text || p.content || '',
           url: p.url || `https://x.com/i/status/${postId}`,
           metrics: {
-            likes: p.likes || p.like_count || 0,
-            retweets: p.retweets || p.retweet_count || 0,
-            replies: p.replies || p.reply_count || 0,
+            likes: p.likes || 0,
+            retweets: p.retweets || 0,
+            replies: p.replies || 0,
           },
-          buzzReason: p.buzz_reason || p.reason,
+          party: p.party || '',
+          stance: p.stance || '',
+          topic: p.topic || '',
+          summary: p.summary || '',
+          buzzReason: p.buzz_reason || '',
           genre: genre,
           createdAt: new Date().toISOString(),
         });
@@ -189,7 +506,7 @@ function extractPostsFromResponse(data: any, genre: string): { posts: any[]; ann
     }
   }
 
-  // annotationsからURL抽出
+  // annotations抽出
   if (data.output && Array.isArray(data.output)) {
     for (const item of data.output) {
       if (item.content && Array.isArray(item.content)) {
@@ -201,10 +518,10 @@ function extractPostsFromResponse(data: any, genre: string): { posts: any[]; ann
                 const statusIdMatch = url.match(/status\/(\d+)/);
                 if (statusIdMatch) {
                   const statusId = statusIdMatch[1];
-                  const normalizedUrl = `https://x.com/i/status/${statusId}`;
-                  if (!allAnnotations.some(a => a.statusId === statusId)) {
-                    allAnnotations.push({ url: normalizedUrl, statusId });
-                  }
+                  allAnnotations.push({
+                    url: `https://x.com/i/status/${statusId}`,
+                    statusId
+                  });
                 }
               }
             }
