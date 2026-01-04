@@ -241,6 +241,8 @@ async function generateAudioUrl(
 // 音声URLを再生（完了を待つ）- BGMダッキング対応・再生速度対応
 // 現在再生中の音声要素（即座に停止するために保持）
 let currentAudioElement: HTMLAudioElement | null = null;
+// すべてのアクティブな音声要素を追跡（複数再生防止）
+const activeAudioElements: Set<HTMLAudioElement> = new Set();
 // ユーザーによる停止かどうかを追跡
 let isStoppingByUser = false;
 // AudioContext（モバイルブラウザ対応）
@@ -280,14 +282,33 @@ export async function unlockAudio(): Promise<void> {
   }
 }
 
-// 音声を即座に停止する関数
+// 音声を即座に停止する関数（すべてのアクティブな音声を停止）
 function stopCurrentAudio() {
+  isStoppingByUser = true;  // ユーザー停止フラグを立てる
+
+  // すべてのアクティブな音声を停止
+  for (const audio of activeAudioElements) {
+    try {
+      audio.pause();
+      audio.src = '';
+    } catch (e) {
+      console.error('[Audio] Error stopping audio:', e);
+    }
+  }
+  activeAudioElements.clear();
+
+  // 現在の音声要素もクリア
   if (currentAudioElement) {
-    isStoppingByUser = true;  // ユーザー停止フラグを立てる
-    currentAudioElement.pause();
-    currentAudioElement.src = '';
+    try {
+      currentAudioElement.pause();
+      currentAudioElement.src = '';
+    } catch (e) {
+      console.error('[Audio] Error stopping current audio:', e);
+    }
     currentAudioElement = null;
   }
+
+  console.log('[Audio] All audio stopped');
 }
 
 async function playAudioUrl(audioUrl: string, speed: number = 1.0): Promise<void> {
@@ -306,8 +327,11 @@ async function playAudioUrl(audioUrl: string, speed: number = 1.0): Promise<void
 
       // 現在の音声要素を保存（停止用）
       currentAudioElement = audioElement;
+      // アクティブリストにも追加
+      activeAudioElements.add(audioElement);
 
       audioElement.onended = async () => {
+        activeAudioElements.delete(audioElement);
         currentAudioElement = null;
         URL.revokeObjectURL(audioUrl);
         // TTS終了後にBGMを戻す
@@ -318,6 +342,7 @@ async function playAudioUrl(audioUrl: string, speed: number = 1.0): Promise<void
       };
 
       audioElement.onerror = () => {
+        activeAudioElements.delete(audioElement);
         currentAudioElement = null;
         URL.revokeObjectURL(audioUrl);
         // ユーザーによる停止の場合はエラーではなく正常終了として扱う
@@ -330,6 +355,7 @@ async function playAudioUrl(audioUrl: string, speed: number = 1.0): Promise<void
       };
 
       audioElement.play().catch((e) => {
+        activeAudioElements.delete(audioElement);
         // ユーザーによる停止の場合はエラーを無視
         if (isStoppingByUser) {
           isStoppingByUser = false;
@@ -1432,20 +1458,23 @@ export const useStore = create<AppState>()(
       },
 
       // AIスクリプト 指定位置から再生
-      playAISectionFromPosition: (sectionIndex: number, chunkIndex: number) => {
+      playAISectionFromPosition: async (sectionIndex: number, chunkIndex: number) => {
         const { isPlaying } = get();
 
-        set({ currentSectionIndex: sectionIndex, currentChunkIndex: chunkIndex });
-
+        // 再生中なら先に停止（音声を即座に停止）
         if (isPlaying) {
-          set({ stopRequested: true });
-          setTimeout(() => {
-            set({ isPlaying: false, stopRequested: false });
-            get().playAIScript();
-          }, 100);
-        } else {
-          get().playAIScript();
+          console.log('[AIPlayback] Stopping current playback before switching section');
+          stopCurrentAudio();
+          if (bgmManager.getIsPlaying()) {
+            bgmManager.stop();
+          }
+          set({ stopRequested: true, isPlaying: false });
+          // 停止処理が完了するまで少し待つ
+          await new Promise(resolve => setTimeout(resolve, 150));
         }
+
+        set({ currentSectionIndex: sectionIndex, currentChunkIndex: chunkIndex, stopRequested: false });
+        get().playAIScript();
       },
 
       // ========================================

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useStore } from './store/useStore';
+import { useStore, unlockAudio } from './store/useStore';
 import { Settings } from './components/Settings';
 import { Player } from './components/Player';
 import { SegmentList } from './components/SegmentList';
@@ -617,7 +617,9 @@ export default function App() {
                           </div>
                           <div className="flex items-center gap-2 text-sm">
                             <button
-                              onClick={() => {
+                              onClick={async () => {
+                                // モバイル用: 先にオーディオ権限を取得
+                                await unlockAudio();
                                 const store = useStore.getState();
                                 store.playAISectionFromPosition(index, 0);
                               }}
