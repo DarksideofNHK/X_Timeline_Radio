@@ -1,0 +1,6 @@
+file 'opening.mp3'
+file 'corner-nhk.mp3'
+file 'corner-newspaper.mp3'
+file 'corner-commercial.mp3'
+file 'corner-overall.mp3'
+file 'ending.mp3'
