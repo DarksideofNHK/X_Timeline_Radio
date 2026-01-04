@@ -583,8 +583,9 @@ export const useStore = create<AppState>()(
             };
           });
 
-          // 最初のセグメントの音声を生成
-          await get().playSegment(0);
+          // 注意: モバイルブラウザでは自動再生がブロックされるため、
+          // ユーザーが明示的に再生ボタンを押すまで待つ
+          console.log('[Program] Ready to play - user must press play button');
         } catch (error: any) {
           console.error('[Program] Initialization error:', error);
           set({
@@ -1230,8 +1231,9 @@ export const useStore = create<AppState>()(
           set({ savedScripts: getSavedScripts() });
           console.log('[AIProgram] Script saved automatically');
 
-          // 自動再生開始
-          get().playAIScript();
+          // 注意: モバイルブラウザでは自動再生がブロックされるため、
+          // ユーザーが明示的に再生ボタンを押すまで待つ
+          console.log('[AIProgram] Ready to play - user must press play button');
         } catch (error: any) {
           console.error('[AIProgram] Initialization error:', error);
           set({
