@@ -325,35 +325,44 @@ export function unlockAudio(): Promise<void> {
         return p ? p.catch(() => {}) : Promise.resolve();
       });
 
+      // 重要: play()を呼んだ直後にaudioUnlockedをtrueにする
+      // これにより、playAudioUrl()が呼ばれた時点でreusableTtsAudioを使用できる
+      // play()の成功/失敗を待つ必要はない - play()を呼んだこと自体がオーディオ要素をアンロックする
+      audioUnlocked = true;
+      console.log('[Audio] Audio unlock initiated (play() called synchronously)');
+
       // AudioContextをresumeする（同期的に呼び出し）
       if (audioContext && audioContext.state === 'suspended') {
         audioContext.resume().catch(() => {});
       }
 
-      // すべてのplay()が完了したら解決
+      // すべてのplay()が完了したらクリーンアップ
       Promise.all(playPromises)
         .then(() => {
           // 再生を停止してリセット
+          // 注意: reusableTtsAudioはpause()しない - playAudioUrl()ですぐに使用される可能性があるため
           audioElementsToUnlock.forEach((audio) => {
+            // 再利用可能なTTS要素はスキップ（srcが変更されれば自動的に前の再生は止まる）
+            if (audio === reusableTtsAudio) {
+              audio.volume = 1; // 音量だけ戻す
+              return;
+            }
             audio.pause();
             audio.currentTime = 0;
-            audio.volume = 1; // 音量を戻す
+            audio.volume = 1;
           });
-
-          audioUnlocked = true;
-          console.log('[Audio] All audio elements unlocked successfully');
+          console.log('[Audio] All audio elements unlocked and cleaned up');
           resolve();
         })
         .catch((e) => {
-          // 失敗してもaudioUnlockedはtrueにしない（次回再試行できるように）
-          console.error('[Audio] Some audio failed to unlock:', e);
-          console.log('[Audio] Will retry on next user gesture');
-          // ただし、resolveはする（UIが止まらないように）
+          console.error('[Audio] Some audio failed during unlock:', e);
+          // play()自体は呼ばれたので、audioUnlockedはtrueのまま
           resolve();
         });
     } catch (e) {
       console.error('[Audio] Error in unlock:', e);
-      // 失敗時はaudioUnlockedをtrueにしない
+      // 同期的なエラーの場合はaudioUnlockedをfalseに戻す
+      audioUnlocked = false;
       console.log('[Audio] Will retry on next user gesture');
       resolve();
     }
