@@ -250,36 +250,114 @@ let audioContext: AudioContext | null = null;
 // オーディオ権限が有効化されたか
 let audioUnlocked = false;
 
-// モバイルブラウザ用: ユーザータップ時にオーディオ権限を取得
-export async function unlockAudio(): Promise<void> {
-  if (audioUnlocked) {
-    console.log('[Audio] Already unlocked');
-    return;
-  }
+// プリロード済みの無音音声要素（即座に再生可能）
+let preloadedSilentAudio: HTMLAudioElement | null = null;
 
-  try {
-    // AudioContextを作成してresumeする
-    if (!audioContext) {
-      audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+// 再利用可能なTTS用オーディオ要素（モバイルで重要）
+let reusableTtsAudio: HTMLAudioElement | null = null;
+
+// 無音音声を事前にロード
+function preloadSilentAudio() {
+  if (!preloadedSilentAudio) {
+    preloadedSilentAudio = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=');
+    preloadedSilentAudio.volume = 0.01;
+    preloadedSilentAudio.load();
+  }
+}
+
+// TTS用のオーディオ要素を初期化（再利用のため）
+function initReusableTtsAudio() {
+  if (!reusableTtsAudio) {
+    reusableTtsAudio = new Audio();
+    reusableTtsAudio.preload = 'auto';
+    console.log('[Audio] Reusable TTS audio element created');
+  }
+}
+
+// 初期化時にオーディオ要素をプリロード
+if (typeof window !== 'undefined') {
+  preloadSilentAudio();
+  initReusableTtsAudio();
+}
+
+// モバイルブラウザ用: ユーザータップ時にオーディオ権限を取得（同期的に実行）
+// 重要: この関数はユーザージェスチャ（タップ/クリック）のコンテキスト内で呼び出す必要がある
+export function unlockAudio(): Promise<void> {
+  return new Promise((resolve) => {
+    if (audioUnlocked) {
+      console.log('[Audio] Already unlocked');
+      resolve();
+      return;
     }
 
-    if (audioContext.state === 'suspended') {
-      await audioContext.resume();
+    console.log('[Audio] Attempting to unlock audio...');
+
+    try {
+      // AudioContextを作成
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+
+      // TTS用オーディオ要素を確実に初期化
+      initReusableTtsAudio();
+
+      // 無音データURLを用意
+      const silentDataUrl = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+
+      // 複数のオーディオ要素を同時にunlockする（すべてユーザージェスチャ内で同期的に実行）
+      const audioElementsToUnlock: HTMLAudioElement[] = [];
+
+      // 1. プリロード済みサイレントオーディオ
+      const silentAudio = preloadedSilentAudio || new Audio(silentDataUrl);
+      silentAudio.volume = 0.01;
+      audioElementsToUnlock.push(silentAudio);
+
+      // 2. TTS用オーディオ要素
+      if (reusableTtsAudio) {
+        reusableTtsAudio.src = silentDataUrl;
+        reusableTtsAudio.volume = 0.01;
+        audioElementsToUnlock.push(reusableTtsAudio);
+      }
+
+      // すべてのオーディオ要素でplay()を同期的に呼び出し（ユーザージェスチャ内で！）
+      const playPromises = audioElementsToUnlock.map((audio) => {
+        const p = audio.play();
+        return p ? p.catch(() => {}) : Promise.resolve();
+      });
+
+      // AudioContextをresumeする（同期的に呼び出し）
+      if (audioContext && audioContext.state === 'suspended') {
+        audioContext.resume().catch(() => {});
+      }
+
+      // すべてのplay()が完了したら解決
+      Promise.all(playPromises)
+        .then(() => {
+          // 再生を停止してリセット
+          audioElementsToUnlock.forEach((audio) => {
+            audio.pause();
+            audio.currentTime = 0;
+            audio.volume = 1; // 音量を戻す
+          });
+
+          audioUnlocked = true;
+          console.log('[Audio] All audio elements unlocked successfully');
+          resolve();
+        })
+        .catch((e) => {
+          // 失敗してもaudioUnlockedはtrueにしない（次回再試行できるように）
+          console.error('[Audio] Some audio failed to unlock:', e);
+          console.log('[Audio] Will retry on next user gesture');
+          // ただし、resolveはする（UIが止まらないように）
+          resolve();
+        });
+    } catch (e) {
+      console.error('[Audio] Error in unlock:', e);
+      // 失敗時はaudioUnlockedをtrueにしない
+      console.log('[Audio] Will retry on next user gesture');
+      resolve();
     }
-
-    // 無音を再生してオーディオ権限を確立
-    const silentAudio = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=');
-    silentAudio.volume = 0.01;
-    await silentAudio.play();
-    silentAudio.pause();
-
-    audioUnlocked = true;
-    console.log('[Audio] Unlocked successfully');
-  } catch (e) {
-    console.error('[Audio] Failed to unlock:', e);
-    // エラーでも続行を試みる
-    audioUnlocked = true;
-  }
+  });
 }
 
 // 音声を即座に停止する関数（すべてのアクティブな音声を停止）
@@ -290,7 +368,10 @@ function stopCurrentAudio() {
   for (const audio of activeAudioElements) {
     try {
       audio.pause();
-      audio.src = '';
+      // 再利用可能な要素のsrcはクリアしない（再利用するため）
+      if (audio !== reusableTtsAudio) {
+        audio.src = '';
+      }
     } catch (e) {
       console.error('[Audio] Error stopping audio:', e);
     }
@@ -301,11 +382,24 @@ function stopCurrentAudio() {
   if (currentAudioElement) {
     try {
       currentAudioElement.pause();
-      currentAudioElement.src = '';
+      // 再利用可能な要素のsrcはクリアしない
+      if (currentAudioElement !== reusableTtsAudio) {
+        currentAudioElement.src = '';
+      }
     } catch (e) {
       console.error('[Audio] Error stopping current audio:', e);
     }
     currentAudioElement = null;
+  }
+
+  // 再利用可能なオーディオ要素も停止（ただしsrcはクリアしない）
+  if (reusableTtsAudio) {
+    try {
+      reusableTtsAudio.pause();
+      reusableTtsAudio.currentTime = 0;
+    } catch (e) {
+      // 無視
+    }
   }
 
   console.log('[Audio] All audio stopped');
@@ -322,18 +416,43 @@ async function playAudioUrl(audioUrl: string, speed: number = 1.0): Promise<void
 
   return new Promise((resolve, reject) => {
     try {
-      const audioElement = new Audio(audioUrl);
-      audioElement.playbackRate = speed; // 再生速度を設定
+      // モバイル対応: 可能な限り再利用可能なオーディオ要素を使用
+      // これはunlockAudioで事前にplay()が呼ばれているため、再生許可がある
+      let audioElement: HTMLAudioElement;
+      const useReusable = reusableTtsAudio && audioUnlocked;
+
+      if (useReusable) {
+        audioElement = reusableTtsAudio!;
+        // 以前のイベントハンドラをクリア
+        audioElement.onended = null;
+        audioElement.onerror = null;
+        console.log('[Audio] Using reusable TTS audio element');
+      } else {
+        audioElement = new Audio();
+        console.log('[Audio] Created new audio element (fallback)');
+      }
+
+      audioElement.src = audioUrl;
+      audioElement.playbackRate = speed;
 
       // 現在の音声要素を保存（停止用）
       currentAudioElement = audioElement;
       // アクティブリストにも追加
       activeAudioElements.add(audioElement);
 
-      audioElement.onended = async () => {
+      const cleanup = () => {
         activeAudioElements.delete(audioElement);
-        currentAudioElement = null;
-        URL.revokeObjectURL(audioUrl);
+        if (currentAudioElement === audioElement) {
+          currentAudioElement = null;
+        }
+        // blob URLを解放（再利用可能要素でも安全）
+        if (audioUrl.startsWith('blob:')) {
+          URL.revokeObjectURL(audioUrl);
+        }
+      };
+
+      audioElement.onended = async () => {
+        cleanup();
         // TTS終了後にBGMを戻す
         if (bgmManager.getIsPlaying()) {
           await bgmManager.unduck();
@@ -341,10 +460,9 @@ async function playAudioUrl(audioUrl: string, speed: number = 1.0): Promise<void
         resolve();
       };
 
-      audioElement.onerror = () => {
-        activeAudioElements.delete(audioElement);
-        currentAudioElement = null;
-        URL.revokeObjectURL(audioUrl);
+      audioElement.onerror = (e) => {
+        console.error('[Audio] Playback error:', e);
+        cleanup();
         // ユーザーによる停止の場合はエラーではなく正常終了として扱う
         if (isStoppingByUser) {
           isStoppingByUser = false;
@@ -355,7 +473,8 @@ async function playAudioUrl(audioUrl: string, speed: number = 1.0): Promise<void
       };
 
       audioElement.play().catch((e) => {
-        activeAudioElements.delete(audioElement);
+        console.error('[Audio] play() rejected:', e);
+        cleanup();
         // ユーザーによる停止の場合はエラーを無視
         if (isStoppingByUser) {
           isStoppingByUser = false;

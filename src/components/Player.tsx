@@ -40,18 +40,34 @@ export function Player() {
 
     const progress = totalChunks > 0 ? Math.round((completedChunks / totalChunks) * 100) : 0;
 
-    const handlePlayPause = async () => {
+    const handlePlayPause = () => {
+      console.log('[Player] Play button clicked, isPlaying:', isPlaying);
       if (isPlaying) {
+        console.log('[Player] Stopping playback');
         stopPlayback();
       } else {
-        // モバイルブラウザ用: 先にオーディオ権限を取得
-        await unlockAudio();
-        playAIScript();
+        console.log('[Player] Starting playback...');
+        // モバイルブラウザ用: オーディオ権限を取得（同期的に呼び出し、待たない）
+        // 重要: unlockAudio()内のplay()呼び出しがユーザージェスチャ内で発生することが必要
+        unlockAudio().then(() => {
+          console.log('[Player] Audio unlock completed');
+        }).catch((e) => {
+          console.error('[Player] Audio unlock failed:', e);
+        });
+        // すぐに再生開始（unlockAudioのplay()呼び出しは既に行われている）
+        playAIScript().catch((e) => {
+          console.error('[Player] Playback error:', e);
+        });
       }
     };
 
     const handleNextSection = () => {
+      console.log('[Player] Next section button clicked');
       if (currentSectionIndex < totalSections - 1) {
+        // 同期的にunlockAudioを呼び出し
+        unlockAudio().then(() => {
+          console.log('[Player] Audio unlock completed for next section');
+        });
         playAISectionFromPosition(currentSectionIndex + 1, 0);
       }
     };
@@ -160,9 +176,13 @@ export function Player() {
     : 0;
 
   // シンプルモードの再生ハンドラー
-  const handleSimplePlay = async () => {
-    // モバイルブラウザ用: 先にオーディオ権限を取得
-    await unlockAudio();
+  const handleSimplePlay = () => {
+    console.log('[Player] Simple play button clicked');
+    // モバイルブラウザ用: オーディオ権限を取得（同期的に呼び出し）
+    unlockAudio().then(() => {
+      console.log('[Player] Audio unlock completed');
+    });
+    // すぐに再生開始
     startPlayback();
   };
 
