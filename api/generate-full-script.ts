@@ -33,16 +33,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const { allPosts, apiKey, showType } = req.body;
 
-    console.log(`[FullScript] Request: showType=${showType}, allPosts keys=${allPosts ? Object.keys(allPosts).join(',') : 'null'}`);
-
-    if (!apiKey) {
-      return res.status(400).json({ error: 'Gemini API key is required' });
-    }
-
-    if (!allPosts || Object.keys(allPosts).length === 0) {
-      return res.status(400).json({ error: 'No posts provided' });
-    }
-
     // 日付情報を生成
     const now = new Date();
     const japanTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
@@ -131,11 +121,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   } catch (error: any) {
     console.error('[API] Error generating full script:', error);
-    console.error('[API] Error stack:', error.stack);
-    return res.status(500).json({
-      error: error.message || 'Unknown error',
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
+    return res.status(500).json({ error: error.message });
   }
 }
 
