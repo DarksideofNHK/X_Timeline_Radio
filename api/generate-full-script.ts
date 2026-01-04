@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { SHOW_TYPES } from './show-types';
 
 // Gemini API
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.0-flash-preview:generateContent';
 
 // レガシー: X Timeline Radio用ジャンル情報
 const LEGACY_GENRE_INFO: Record<string, { name: string; icon: string }> = {
