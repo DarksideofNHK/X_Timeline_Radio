@@ -2,7 +2,31 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const GROK_API_URL = 'https://api.x.ai/v1/responses';
 
-// レガシー: X Timeline Radio用ジャンル（後方互換性）
+// 番組タイプ設定（インライン定義でインポート問題を回避）
+const INLINE_SHOW_TYPES: Record<string, { name: string; genres: Array<{ id: string; name: string; icon: string; query: string; camp?: string }> }> = {
+  'politician-watch': {
+    name: 'X政治家ウオッチ',
+    genres: [
+      { id: 'ruling-ldp', name: '自民党', icon: '🔴', query: '', camp: '与党' },
+      { id: 'ruling-komeito', name: '公明党', icon: '🟡', query: '', camp: '与党' },
+      { id: 'opposition-cdp', name: '立憲民主党', icon: '🔵', query: '', camp: '野党' },
+      { id: 'opposition-ishin', name: '日本維新の会', icon: '🟢', query: '', camp: '野党' },
+      { id: 'opposition-dpfp', name: '国民民主党', icon: '🟠', query: '', camp: '野党' },
+      { id: 'opposition-others', name: 'その他野党', icon: '🟣', query: '', camp: '野党' },
+      { id: 'public-reaction', name: '国民の声', icon: '👥', query: '', camp: '一般' },
+    ],
+  },
+  'old-media-buster': {
+    name: 'オールドメディアをぶっ壊せラジオ',
+    genres: [
+      { id: 'nhk', name: 'NHK批判', icon: '📺', query: '(NHK OR 日本放送協会) (偏向 OR 捏造 OR 問題 OR 批判 OR おかしい OR 受信料)' },
+      { id: 'newspapers', name: '新聞批判', icon: '📰', query: '(朝日新聞 OR 毎日新聞 OR 読売新聞 OR 産経新聞 OR 東京新聞) (偏向 OR 捏造 OR 問題 OR 批判)' },
+      { id: 'tv-stations', name: '民放批判', icon: '📡', query: '(フジテレビ OR 日テレ OR TBS OR テレ朝 OR テレビ東京) (偏向 OR やらせ OR 問題 OR 批判)' },
+    ],
+  },
+};
+
+// レガシー: X Timeline Radio用ジャンル
 const LEGACY_GENRES = [
   { id: 'trending', name: '今バズってる話題', query: '直近数時間で急激に拡散されているPost' },
   { id: 'politics', name: '政治ニュース', query: '政治、国会、選挙、政党、政策に関するPost' },
@@ -28,9 +52,49 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { genre, apiKey } = req.body;
+    const { genre, showType, apiKey } = req.body;
 
-    // レガシー形式: genre のみ指定（新形式は一時的に無効化）
+    // 新形式: showTypeが指定された場合
+    if (showType && INLINE_SHOW_TYPES[showType]) {
+      const show = INLINE_SHOW_TYPES[showType];
+      const allPosts: Record<string, any[]> = {};
+      const allAnnotations: any[] = [];
+
+      // 政治家ウオッチの場合は2段階アプローチ
+      if (showType === 'politician-watch') {
+        const accounts = await fetchPoliticianAccounts(apiKey);
+
+        // 各政党のPost収集を並列実行
+        const collectPromises = show.genres.map(async (genreConfig) => {
+          const posts = await collectPoliticianPosts(genreConfig, accounts, apiKey);
+          return { id: genreConfig.id, posts };
+        });
+        const results = await Promise.all(collectPromises);
+        for (const result of results) {
+          allPosts[result.id] = result.posts;
+        }
+      } else {
+        // オールドメディア等：汎用収集を並列実行
+        const collectPromises = show.genres.map(async (genreConfig) => {
+          const { posts, annotations } = await collectGenericPosts(genreConfig, show.name, apiKey);
+          return { id: genreConfig.id, posts, annotations };
+        });
+        const results = await Promise.all(collectPromises);
+        for (const result of results) {
+          allPosts[result.id] = result.posts;
+          allAnnotations.push(...result.annotations);
+        }
+      }
+
+      return res.status(200).json({
+        posts: allPosts,
+        showType,
+        showName: show.name,
+        annotations: allAnnotations
+      });
+    }
+
+    // レガシー形式: genre のみ指定
     const genreConfig = LEGACY_GENRES.find((g) => g.id === genre);
     if (!genreConfig) {
       return res.status(400).json({ error: `Unknown genre: ${genre}` });
@@ -267,10 +331,10 @@ async function collectPublicReaction(apiKey: string): Promise<any[]> {
   }
 }
 
-// 汎用Post収集（ガバメントウオッチ、その他番組用）- 一時的に無効化
-async function collectPostsForGenre(
-  genreConfig: any,
-  show: any,
+// 汎用Post収集（オールドメディア等）
+async function collectGenericPosts(
+  genreConfig: { id: string; name: string; query: string },
+  showName: string,
   apiKey: string
 ): Promise<{ posts: any[]; annotations: any[] }> {
   const now = new Date();
@@ -280,7 +344,7 @@ async function collectPostsForGenre(
   const prompt = `
 あなたはXの投稿キュレーターです。
 
-【番組】${show.name}
+【番組】${showName}
 【ジャンル】${genreConfig.name}
 【検索クエリ】${genreConfig.query}
 【条件】直近24時間以内の日本語Post
