@@ -31,8 +31,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const { genre, showType, apiKey } = req.body;
 
+    console.log(`[CollectPosts] Request: showType=${showType}, genre=${genre}`);
+
+    if (!apiKey) {
+      return res.status(400).json({ error: 'API key is required' });
+    }
+
     // 新形式: showTypeが指定された場合
     if (showType && SHOW_TYPES[showType]) {
+      console.log(`[CollectPosts] Using showType mode: ${showType}`);
       const show = SHOW_TYPES[showType];
       const allPosts: Record<string, any[]> = {};
       const allAnnotations: any[] = [];
@@ -41,16 +48,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (showType === 'politician-watch') {
         const accounts = await fetchPoliticianAccounts(apiKey);
 
-        for (const genreConfig of show.genres) {
+        // 各政党のPost収集を並列実行
+        const collectPromises = show.genres.map(async (genreConfig) => {
           const posts = await collectPoliticianPosts(genreConfig, accounts, apiKey);
-          allPosts[genreConfig.id] = posts;
+          return { id: genreConfig.id, posts };
+        });
+        const results = await Promise.all(collectPromises);
+        for (const result of results) {
+          allPosts[result.id] = result.posts;
         }
       } else {
-        // その他の番組
-        for (const genreConfig of show.genres) {
+        // その他の番組も並列実行
+        const collectPromises = show.genres.map(async (genreConfig) => {
           const { posts, annotations } = await collectPostsForGenre(genreConfig, show, apiKey);
-          allPosts[genreConfig.id] = posts;
-          allAnnotations.push(...annotations);
+          return { id: genreConfig.id, posts, annotations };
+        });
+        const results = await Promise.all(collectPromises);
+        for (const result of results) {
+          allPosts[result.id] = result.posts;
+          allAnnotations.push(...result.annotations);
         }
       }
 
@@ -73,7 +89,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   } catch (error: any) {
     console.error('[API] Error collecting posts:', error);
-    return res.status(500).json({ error: error.message });
+    console.error('[API] Error stack:', error.stack);
+    return res.status(500).json({
+      error: error.message || 'Unknown error',
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 }
 
