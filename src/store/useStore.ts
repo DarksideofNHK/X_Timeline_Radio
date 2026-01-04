@@ -540,7 +540,7 @@ export const useStore = create<AppState>()(
         speed: 1.0,
         programMode: 'simple',  // デフォルトはシンプルモード
         theme: 'light',  // デフォルトはライトテーマ
-        showType: 'politician-watch',  // デフォルトは政治家ウオッチ
+        showType: 'x-timeline-radio',  // デフォルトはX Timeline Radio
       },
       error: null,
 

@@ -10,10 +10,20 @@ export interface ShowTypeConfig {
   icon: string;
   allowDownload: boolean;
   color: string; // UIテーマカラー
+  isTest?: boolean; // テスト版フラグ
 }
 
 // 利用可能な番組タイプ
 export const SHOW_TYPES: ShowTypeConfig[] = [
+  {
+    id: 'x-timeline-radio',
+    name: 'X Timeline Radio',
+    description: 'Xのトレンドを7ジャンルでお届け',
+    icon: '📻',
+    allowDownload: false,
+    color: 'blue',
+    isTest: false,
+  },
   {
     id: 'politician-watch',
     name: 'X政治家ウオッチ',
@@ -21,6 +31,7 @@ export const SHOW_TYPES: ShowTypeConfig[] = [
     icon: '🥊',
     allowDownload: true, // 公人なのでOK
     color: 'red',
+    isTest: true, // テスト版
   },
   {
     id: 'old-media-buster',
@@ -29,18 +40,9 @@ export const SHOW_TYPES: ShowTypeConfig[] = [
     icon: '📺',
     allowDownload: false, // 一般人の投稿含む
     color: 'orange',
+    isTest: true, // テスト版
   },
 ];
-
-// レガシーモード（既存のX Timeline Radio）
-export const LEGACY_SHOW: ShowTypeConfig = {
-  id: 'x-timeline-radio',
-  name: 'X Timeline Radio',
-  description: 'Xのトレンドを5分でお届け（レガシー）',
-  icon: '📻',
-  allowDownload: false,
-  color: 'blue',
-};
 
 // IDから番組タイプを取得
 export function getShowType(id: string): ShowTypeConfig | undefined {
