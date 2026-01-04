@@ -563,7 +563,9 @@ export default function App() {
                 </div>
                 <div className="space-y-4 max-h-[60vh] overflow-y-auto">
                   {Object.entries(collectedPosts).map(([genre, posts]) => {
+                    // 全番組タイプのジャンル情報を統合
                     const genreInfo: Record<string, { name: string; icon: string }> = {
+                      // X Timeline Radio
                       trending: { name: '今バズってる話題', icon: '🔥' },
                       politics: { name: '政治ニュース', icon: '🏛️' },
                       economy: { name: '経済・マネー', icon: '💹' },
@@ -571,6 +573,18 @@ export default function App() {
                       entertainment: { name: 'エンタメ', icon: '🎬' },
                       science: { name: '科学・テクノロジー', icon: '🔬' },
                       international: { name: '国際ニュース', icon: '🌍' },
+                      // X政治家ウオッチ
+                      'ruling-ldp': { name: '自民党', icon: '🔴' },
+                      'ruling-komeito': { name: '公明党', icon: '🟡' },
+                      'opposition-cdp': { name: '立憲民主党', icon: '🔵' },
+                      'opposition-ishin': { name: '日本維新の会', icon: '🟢' },
+                      'opposition-dpfp': { name: '国民民主党', icon: '🟠' },
+                      'opposition-others': { name: 'その他野党', icon: '🟣' },
+                      'public-reaction': { name: '国民の声', icon: '👥' },
+                      // オールドメディアをぶっ壊せラジオ
+                      'nhk': { name: 'NHK批判', icon: '📺' },
+                      'newspapers': { name: '新聞批判', icon: '📰' },
+                      'tv-stations': { name: '民放批判', icon: '📡' },
                     };
                     const info = genreInfo[genre] || { name: genre, icon: '📰' };
                     if (!posts || posts.length === 0) return null;

@@ -17,19 +17,25 @@ interface AudioSettings {
   showType: ShowTypeId; // AI番組モード用の番組タイプ
 }
 
-// キャッシュ設定
-const CACHE_KEY = 'x-timeline-radio-posts-cache';
+// キャッシュ設定（showType別にキャッシュ）
+const CACHE_KEY_PREFIX = 'x-timeline-radio-posts-cache';
 const CACHE_DURATION = 30 * 60 * 1000; // 30分
 
 interface PostsCache {
   posts: Record<Genre, BuzzPost[]>;
   annotations?: RelatedPost[];  // Grokが参照した関連投稿URL
   timestamp: number;
+  showType?: string;  // キャッシュがどのshowType用か
 }
 
-function loadPostsCache(): PostsCache | null {
+function getCacheKey(showType: string): string {
+  return `${CACHE_KEY_PREFIX}-${showType}`;
+}
+
+function loadPostsCache(showType: string): PostsCache | null {
   try {
-    const cached = localStorage.getItem(CACHE_KEY);
+    const cacheKey = getCacheKey(showType);
+    const cached = localStorage.getItem(cacheKey);
     if (!cached) return null;
 
     const data: PostsCache = JSON.parse(cached);
@@ -37,12 +43,12 @@ function loadPostsCache(): PostsCache | null {
 
     // 有効期限チェック
     if (now - data.timestamp > CACHE_DURATION) {
-      console.log('[Cache] Expired, clearing...');
-      localStorage.removeItem(CACHE_KEY);
+      console.log(`[Cache] Expired for ${showType}, clearing...`);
+      localStorage.removeItem(cacheKey);
       return null;
     }
 
-    console.log('[Cache] Loaded posts from cache');
+    console.log(`[Cache] Loaded posts from cache for ${showType}`);
     return data;
   } catch (e) {
     console.error('[Cache] Failed to load:', e);
@@ -50,23 +56,33 @@ function loadPostsCache(): PostsCache | null {
   }
 }
 
-function savePostsCache(posts: Record<Genre, BuzzPost[]>, annotations?: RelatedPost[]): void {
+function savePostsCache(posts: Record<Genre, BuzzPost[]>, annotations?: RelatedPost[], showType: string = 'x-timeline-radio'): void {
   try {
+    const cacheKey = getCacheKey(showType);
     const data: PostsCache = {
       posts,
       annotations,
       timestamp: Date.now(),
+      showType,
     };
-    localStorage.setItem(CACHE_KEY, JSON.stringify(data));
-    console.log(`[Cache] Saved posts and ${annotations?.length || 0} annotations to cache`);
+    localStorage.setItem(cacheKey, JSON.stringify(data));
+    console.log(`[Cache] Saved posts for ${showType} (${annotations?.length || 0} annotations)`);
   } catch (e) {
     console.error('[Cache] Failed to save:', e);
   }
 }
 
-function clearPostsCache(): void {
-  localStorage.removeItem(CACHE_KEY);
-  console.log('[Cache] Cleared');
+function clearPostsCache(showType?: string): void {
+  if (showType) {
+    localStorage.removeItem(getCacheKey(showType));
+    console.log(`[Cache] Cleared for ${showType}`);
+  } else {
+    // 全showTypeのキャッシュをクリア
+    ['x-timeline-radio', 'politician-watch', 'old-media-buster'].forEach(st => {
+      localStorage.removeItem(getCacheKey(st));
+    });
+    console.log('[Cache] Cleared all');
+  }
 }
 
 // URLを除去
@@ -616,8 +632,8 @@ export const useStore = create<AppState>()(
 
           set({ program });
 
-          // キャッシュをチェック
-          const cache = loadPostsCache();
+          // キャッシュをチェック（シンプルモードはx-timeline-radio固定）
+          const cache = loadPostsCache('x-timeline-radio');
           let results: { index: number; posts: BuzzPost[] }[];
 
           if (cache) {
@@ -670,12 +686,12 @@ export const useStore = create<AppState>()(
             const fetchResults = await Promise.all(collectPromises);
             results = fetchResults;
 
-            // キャッシュに保存（annotationsも含む）
+            // キャッシュに保存（annotationsも含む、シンプルモードはx-timeline-radio固定）
             const postsMap: Record<Genre, BuzzPost[]> = {} as Record<Genre, BuzzPost[]>;
             fetchResults.forEach((r) => {
               postsMap[PROGRAM_SEGMENTS[r.index]] = r.posts;
             });
-            savePostsCache(postsMap, allAnnotations);
+            savePostsCache(postsMap, allAnnotations, 'x-timeline-radio');
 
             // annotationsを状態に保存
             console.log(`[Program] Collected ${allAnnotations.length} unique annotations`);
@@ -1269,14 +1285,15 @@ export const useStore = create<AppState>()(
         set({ isInitializing: true, error: null, isGeneratingScript: false });
 
         try {
-          console.log('[AIProgram] Collecting posts for all genres...');
+          const { showType } = audioSettings;
+          console.log(`[AIProgram] Collecting posts for showType: ${showType}...`);
 
-          // キャッシュをチェック
-          const cache = loadPostsCache();
+          // キャッシュをチェック（showType別）
+          const cache = loadPostsCache(showType);
           let allPosts: Record<Genre, BuzzPost[]>;
 
           if (cache) {
-            console.log('[AIProgram] Using cached posts...');
+            console.log(`[AIProgram] Using cached posts for ${showType}...`);
             allPosts = cache.posts;
             // キャッシュからannotationsも復元
             if (cache.annotations && cache.annotations.length > 0) {
@@ -1284,7 +1301,6 @@ export const useStore = create<AppState>()(
               set({ collectedAnnotations: cache.annotations });
             }
           } else {
-            const { showType } = audioSettings;
             const allAnnotations: RelatedPost[] = [];
 
             // showTypeが設定されていて、レガシーでない場合は1回のAPI呼び出しで全ジャンル取得
@@ -1363,8 +1379,8 @@ export const useStore = create<AppState>()(
               });
             }
 
-            // キャッシュに保存（annotationsも含む）
-            savePostsCache(allPosts, allAnnotations);
+            // キャッシュに保存（annotationsも含む、showType別）
+            savePostsCache(allPosts, allAnnotations, showType);
 
             // annotationsを状態に保存
             console.log(`[AIProgram] Collected ${allAnnotations.length} unique annotations`);
@@ -1728,10 +1744,11 @@ export const useStore = create<AppState>()(
           if (state?.audioSettings?.theme) {
             document.documentElement.setAttribute('data-theme', state.audioSettings.theme);
           }
-          // キャッシュからannotationsを復元
-          const cache = loadPostsCache();
+          // キャッシュからannotationsを復元（現在のshowTypeのキャッシュを使用）
+          const currentShowType = state?.audioSettings?.showType || 'x-timeline-radio';
+          const cache = loadPostsCache(currentShowType);
           if (cache?.annotations && cache.annotations.length > 0) {
-            console.log(`[Store] Restoring ${cache.annotations.length} annotations from cache`);
+            console.log(`[Store] Restoring ${cache.annotations.length} annotations from cache for ${currentShowType}`);
             useStore.setState({ collectedAnnotations: cache.annotations });
           }
 
