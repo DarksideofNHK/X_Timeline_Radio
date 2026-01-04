@@ -6,6 +6,7 @@ import { bgmManager, type BgmSource } from '../lib/bgm';
 import { audioCache } from '../lib/audioCache';
 import { getSavedScripts, saveScript, deleteScript, type SavedScript } from '../lib/scriptStorage';
 import { getApiKeys, saveApiKeys } from '../lib/apiKeyStorage';
+import { mediaSessionManager } from '../lib/mediaSession';
 
 // 音声設定（OpenAI TTSのみ使用）
 interface AudioSettings {
@@ -648,6 +649,15 @@ export const useStore = create<AppState>()(
         // 再生中フラグをセット
         set({ isPlaying: true });
 
+        // Media Sessionを更新
+        const segment = program.segments[segmentIndex];
+        mediaSessionManager.updateMetadata({
+          title: `${segment.icon} ${segment.name}`,
+          artist: 'X Timeline Radio',
+          album: 'シンプルモード',
+        });
+        mediaSessionManager.setPlaybackState('playing');
+
         // BGMが設定されていれば先行再生開始
         if (!bgmManager.getIsPlaying()) {
           const bgmConfig = bgmManager.getConfig();
@@ -663,7 +673,6 @@ export const useStore = create<AppState>()(
           currentAudio.src = '';
         }
 
-        const segment = program.segments[segmentIndex];
         if (segment.posts.length === 0) {
           console.log(`[Playback] Segment ${segmentIndex} has no posts, skipping`);
           set({ isPlaying: false });
@@ -1027,6 +1036,9 @@ export const useStore = create<AppState>()(
           bgmManager.stop();
         }
 
+        // Media Sessionを更新
+        mediaSessionManager.setPlaybackState('paused');
+
         set({ stopRequested: true, isPlaying: false });
       },
 
@@ -1296,6 +1308,14 @@ export const useStore = create<AppState>()(
 
         set({ isPlaying: true });
 
+        // Media Sessionを更新
+        mediaSessionManager.updateMetadata({
+          title: 'X Timeline Radio',
+          artist: 'AI番組モード',
+          album: `${aiProgram.totalDuration}分の番組`,
+        });
+        mediaSessionManager.setPlaybackState('playing');
+
         // BGMが設定されていれば再生開始
         if (!bgmManager.getIsPlaying()) {
           const bgmConfig = bgmManager.getConfig();
@@ -1362,10 +1382,17 @@ export const useStore = create<AppState>()(
             const chunkInfo = allChunks[i];
             set({ currentSectionIndex: chunkInfo.secIdx, currentChunkIndex: chunkInfo.chunkIdx });
 
-            // セクション変更時にログ
+            // セクション変更時にログ + Media Session更新
             if (i === startIdx || allChunks[i - 1].secIdx !== chunkInfo.secIdx) {
               const section = aiProgram.sections[chunkInfo.secIdx];
               console.log(`[AIPlayback] Section ${chunkInfo.secIdx + 1}/${aiProgram.sections.length}: ${section.title}`);
+
+              // Media Sessionメタデータを更新
+              mediaSessionManager.updateMetadata({
+                title: section.title,
+                artist: 'X Timeline Radio',
+                album: `AI番組 (${chunkInfo.secIdx + 1}/${aiProgram.sections.length})`,
+              });
             }
 
             console.log(`[AIPlayback] Chunk ${i + 1}/${allChunks.length}: ${chunkInfo.text.substring(0, 30)}...`);
@@ -1533,6 +1560,36 @@ export const useStore = create<AppState>()(
             console.log(`[Store] Restoring ${cache.annotations.length} annotations from cache`);
             useStore.setState({ collectedAnnotations: cache.annotations });
           }
+
+          // Media Sessionを初期化（バックグラウンド再生対応）
+          mediaSessionManager.initialize();
+          mediaSessionManager.setActionHandlers({
+            play: () => {
+              const store = useStore.getState();
+              if (store.audioSettings.programMode === 'ai-script') {
+                store.playAIScript();
+              } else {
+                store.startPlayback();
+              }
+            },
+            pause: () => {
+              useStore.getState().stopPlayback();
+            },
+            stop: () => {
+              useStore.getState().stopPlayback();
+            },
+            nexttrack: () => {
+              const store = useStore.getState();
+              if (store.audioSettings.programMode === 'ai-script' && store.aiProgram) {
+                const nextSection = store.currentSectionIndex + 1;
+                if (nextSection < store.aiProgram.sections.length) {
+                  store.playAISectionFromPosition(nextSection, 0);
+                }
+              } else {
+                store.nextSegment();
+              }
+            },
+          });
         }
       },
     }
