@@ -402,6 +402,7 @@ async function playAudioUrl(audioUrl: string, speed: number = 1.0): Promise<void
       // 新しい音声を設定
       audio.src = audioUrl;
       audio.playbackRate = speed;
+      audio.volume = 1;  // 音量を最大に設定（unlockで0.01になっている可能性があるため）
 
       // 再生開始
       const playPromise = audio.play();
