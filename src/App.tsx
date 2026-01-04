@@ -376,10 +376,15 @@ export default function App() {
                         <div className="flex items-center gap-3">
                           <span className="text-2xl">{show.icon}</span>
                           <div className="flex-1 min-w-0">
-                            <div className={`font-bold text-sm ${
+                            <div className={`font-bold text-sm flex items-center gap-2 ${
                               audioSettings.showType === show.id ? 'text-purple-600' : 'text-text-primary'
                             }`}>
                               {show.name}
+                              {show.isTest && (
+                                <span className="text-[10px] px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded font-normal">
+                                  TEST
+                                </span>
+                              )}
                             </div>
                             <div className="text-xs text-text-secondary truncate">
                               {show.description}
