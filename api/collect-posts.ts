@@ -1,5 +1,4 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { SHOW_TYPES, type ShowType, type Genre } from './show-types';
 
 const GROK_API_URL = 'https://api.x.ai/v1/responses';
 
@@ -29,49 +28,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { genre, showType, apiKey } = req.body;
+    const { genre, apiKey } = req.body;
 
-    // 新形式: showTypeが指定された場合
-    if (showType && SHOW_TYPES[showType]) {
-      const show = SHOW_TYPES[showType];
-      const allPosts: Record<string, any[]> = {};
-      const allAnnotations: any[] = [];
-
-      // 政治家ウオッチの場合は2段階アプローチ
-      if (showType === 'politician-watch') {
-        const accounts = await fetchPoliticianAccounts(apiKey);
-
-        // 各政党のPost収集を並列実行
-        const collectPromises = show.genres.map(async (genreConfig) => {
-          const posts = await collectPoliticianPosts(genreConfig, accounts, apiKey);
-          return { id: genreConfig.id, posts };
-        });
-        const results = await Promise.all(collectPromises);
-        for (const result of results) {
-          allPosts[result.id] = result.posts;
-        }
-      } else {
-        // その他の番組も並列実行
-        const collectPromises = show.genres.map(async (genreConfig) => {
-          const { posts, annotations } = await collectPostsForGenre(genreConfig, show, apiKey);
-          return { id: genreConfig.id, posts, annotations };
-        });
-        const results = await Promise.all(collectPromises);
-        for (const result of results) {
-          allPosts[result.id] = result.posts;
-          allAnnotations.push(...result.annotations);
-        }
-      }
-
-      return res.status(200).json({
-        posts: allPosts,
-        showType,
-        showName: show.name,
-        annotations: allAnnotations
-      });
-    }
-
-    // レガシー形式: genre のみ指定
+    // レガシー形式: genre のみ指定（新形式は一時的に無効化）
     const genreConfig = LEGACY_GENRES.find((g) => g.id === genre);
     if (!genreConfig) {
       return res.status(400).json({ error: `Unknown genre: ${genre}` });
@@ -157,9 +116,9 @@ async function fetchPoliticianAccounts(apiKey: string): Promise<Record<string, a
   return {};
 }
 
-// 政治家Post収集
+// 政治家Post収集（一時的に無効化）
 async function collectPoliticianPosts(
-  genreConfig: Genre,
+  genreConfig: any,
   accounts: Record<string, any[]>,
   apiKey: string
 ): Promise<any[]> {
@@ -308,10 +267,10 @@ async function collectPublicReaction(apiKey: string): Promise<any[]> {
   }
 }
 
-// 汎用Post収集（ガバメントウオッチ、その他番組用）
+// 汎用Post収集（ガバメントウオッチ、その他番組用）- 一時的に無効化
 async function collectPostsForGenre(
-  genreConfig: Genre,
-  show: ShowType,
+  genreConfig: any,
+  show: any,
   apiKey: string
 ): Promise<{ posts: any[]; annotations: any[] }> {
   const now = new Date();
