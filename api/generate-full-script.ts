@@ -1,5 +1,4 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { SHOW_TYPES } from './show-types';
 
 // Gemini API
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.0-flash-preview:generateContent';
@@ -42,7 +41,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const weekday = weekdays[japanTime.getDay()];
 
     let prompt: string;
-    let showConfig = SHOW_TYPES[showType];
+    // showConfigは現時点では使用しない（後で動的インポートに変更予定）
+    let showConfig: any = null;
 
     // 番組タイプに応じたプロンプト生成
     if (showType === 'politician-watch') {
