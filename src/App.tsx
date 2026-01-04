@@ -617,9 +617,9 @@ export default function App() {
                           </div>
                           <div className="flex items-center gap-2 text-sm">
                             <button
-                              onClick={async () => {
-                                // モバイル用: 先にオーディオ権限を取得
-                                await unlockAudio();
+                              onClick={() => {
+                                // モバイル用: オーディオ権限を取得（awaitしない - ユーザージェスチャ内でplay()を呼ぶ）
+                                unlockAudio();
                                 const store = useStore.getState();
                                 store.playAISectionFromPosition(index, 0);
                               }}
