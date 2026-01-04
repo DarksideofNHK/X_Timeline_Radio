@@ -7,7 +7,8 @@ import { PostList, Playlist } from './components/Playlist';
 import { SectionIndicator } from './components/SectionIndicator';
 import { RelatedPosts } from './components/RelatedPosts';
 import { formatScriptDate } from './lib/scriptStorage';
-import type { ProgramMode } from './types';
+import { SHOW_TYPES, getShowType, isDownloadAllowed } from './lib/showTypes';
+import type { ProgramMode, ShowTypeId } from './types';
 
 export default function App() {
   // シンプルモード用
@@ -82,6 +83,14 @@ export default function App() {
   const handleModeChange = (mode: ProgramMode) => {
     setAudioSettings({ programMode: mode });
   };
+
+  // 番組タイプ変更ハンドラー
+  const handleShowTypeChange = (showType: ShowTypeId) => {
+    setAudioSettings({ showType });
+  };
+
+  // 現在の番組タイプ
+  const currentShowType = getShowType(audioSettings.showType as string);
 
   return (
     <div className="min-h-screen bg-bg-main text-text-primary">
@@ -346,6 +355,50 @@ export default function App() {
                   </div>
                 </button>
               </div>
+
+              {/* AI番組タイプ選択（AIモード時のみ表示） */}
+              {isAIMode && (
+                <div className="mb-6">
+                  <h3 className="text-sm font-medium text-text-secondary mb-3 text-center">
+                    番組タイプを選択
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-lg mx-auto">
+                    {SHOW_TYPES.map((show) => (
+                      <button
+                        key={show.id}
+                        onClick={() => handleShowTypeChange(show.id as ShowTypeId)}
+                        className={`p-4 rounded-xl border-2 text-left transition-all ${
+                          audioSettings.showType === show.id
+                            ? 'border-purple-500 bg-purple-500/10'
+                            : 'border-border-light bg-bg-menu hover:border-purple-500/50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl">{show.icon}</span>
+                          <div className="flex-1 min-w-0">
+                            <div className={`font-bold text-sm ${
+                              audioSettings.showType === show.id ? 'text-purple-600' : 'text-text-primary'
+                            }`}>
+                              {show.name}
+                            </div>
+                            <div className="text-xs text-text-secondary truncate">
+                              {show.description}
+                            </div>
+                            {show.allowDownload && (
+                              <div className="text-xs text-green-600 mt-1">
+                                💾 ダウンロード可
+                              </div>
+                            )}
+                          </div>
+                          {audioSettings.showType === show.id && (
+                            <span className="text-purple-500">✓</span>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* スタートボタン */}
               <button

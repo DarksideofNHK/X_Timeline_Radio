@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { ShowProgram, Segment, BuzzPost, ApiConfig, Genre, OpenAIVoiceId, ProgramMode, AIScriptProgram, ScriptSection, Theme, RelatedPost } from '../types';
+import type { ShowProgram, Segment, BuzzPost, ApiConfig, Genre, OpenAIVoiceId, ProgramMode, AIScriptProgram, ScriptSection, Theme, RelatedPost, ShowTypeId } from '../types';
 import { GENRES, PROGRAM_SEGMENTS, POSTS_PER_SEGMENT } from '../lib/genres';
 import { bgmManager, type BgmSource } from '../lib/bgm';
 import { audioCache } from '../lib/audioCache';
@@ -14,6 +14,7 @@ interface AudioSettings {
   speed: number; // 0.75 - 2.0
   programMode: ProgramMode; // 'simple' | 'ai-script'
   theme: Theme; // 'light' | 'dark'
+  showType: ShowTypeId; // AI番組モード用の番組タイプ
 }
 
 // キャッシュ設定
@@ -241,39 +242,31 @@ async function generateAudioUrl(
 // 音声URLを再生（完了を待つ）- BGMダッキング対応・再生速度対応
 // 現在再生中の音声要素（即座に停止するために保持）
 let currentAudioElement: HTMLAudioElement | null = null;
-// すべてのアクティブな音声要素を追跡（複数再生防止）
-const activeAudioElements: Set<HTMLAudioElement> = new Set();
+// TTS用の再利用可能な音声要素（バックグラウンド再生対応）
+let reusableTtsAudio: HTMLAudioElement | null = null;
 // ユーザーによる停止かどうかを追跡
 let isStoppingByUser = false;
-// AudioContext（モバイルブラウザ対応 - Web Audio API）
-let audioContext: AudioContext | null = null;
-// 現在再生中のAudioBufferSourceNode
-let currentSourceNode: AudioBufferSourceNode | null = null;
 // オーディオ権限が有効化されたか
 let audioUnlocked = false;
 
-// Web Audio API用のGainNode（音量制御）
-let gainNode: GainNode | null = null;
-
-// AudioContextを取得または作成
-function getAudioContext(): AudioContext {
-  if (!audioContext) {
-    audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    gainNode = audioContext.createGain();
-    gainNode.connect(audioContext.destination);
-    console.log('[Audio] AudioContext created');
+// TTS用のHTMLAudioElementを取得または作成
+function getTtsAudioElement(): HTMLAudioElement {
+  if (!reusableTtsAudio) {
+    reusableTtsAudio = new Audio();
+    reusableTtsAudio.preload = 'auto';
+    console.log('[Audio] Created reusable TTS audio element');
   }
-  return audioContext;
+  return reusableTtsAudio;
 }
 
 // 初期化
 if (typeof window !== 'undefined') {
-  // AudioContextを事前に作成
-  getAudioContext();
+  // TTS用のAudio要素を事前に作成
+  getTtsAudioElement();
 }
 
 // モバイルブラウザ用: ユーザータップ時にオーディオ権限を取得
-// Web Audio APIのAudioContextをresumeする
+// HTMLAudioElementを無音再生してアンロック
 // 重要: この関数はユーザージェスチャ（タップ/クリック）のコンテキスト内で呼び出す必要がある
 export function unlockAudio(): Promise<void> {
   return new Promise((resolve) => {
@@ -283,27 +276,36 @@ export function unlockAudio(): Promise<void> {
       return;
     }
 
-    console.log('[Audio] Attempting to unlock AudioContext...');
+    console.log('[Audio] Attempting to unlock audio...');
 
     try {
-      const ctx = getAudioContext();
+      const ttsAudio = getTtsAudioElement();
 
-      // AudioContextがsuspended状態の場合はresumeする
-      // これはユーザージェスチャ内で呼ばれる必要がある
-      if (ctx.state === 'suspended') {
-        ctx.resume()
+      // 無音のデータURIを設定して再生（最小限の無音MP3）
+      // これによりHTMLAudioElementがアンロックされる
+      const silentDataUri = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYYNAAAAAAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYYNAAAAAAAAAAAAAAAAAAAA';
+
+      ttsAudio.src = silentDataUri;
+      ttsAudio.volume = 0.01;
+
+      const playPromise = ttsAudio.play();
+      if (playPromise) {
+        playPromise
           .then(() => {
             audioUnlocked = true;
-            console.log('[Audio] AudioContext resumed successfully');
+            console.log('[Audio] Audio unlocked successfully');
+            // すぐに停止して次の再生に備える
+            ttsAudio.pause();
+            ttsAudio.currentTime = 0;
+            ttsAudio.volume = 1;
             resolve();
           })
           .catch((e) => {
-            console.error('[Audio] Failed to resume AudioContext:', e);
+            console.error('[Audio] Failed to unlock audio:', e);
             resolve();
           });
       } else {
         audioUnlocked = true;
-        console.log('[Audio] AudioContext already running');
         resolve();
       }
     } catch (e) {
@@ -313,31 +315,19 @@ export function unlockAudio(): Promise<void> {
   });
 }
 
-// 音声を即座に停止する関数（すべてのアクティブな音声を停止）
+// 音声を即座に停止する関数
 function stopCurrentAudio() {
   isStoppingByUser = true;  // ユーザー停止フラグを立てる
 
-  // Web Audio APIのSourceNodeを停止
-  if (currentSourceNode) {
+  // TTS用のAudio要素を停止
+  if (reusableTtsAudio) {
     try {
-      currentSourceNode.stop();
-      currentSourceNode.disconnect();
+      reusableTtsAudio.pause();
+      reusableTtsAudio.currentTime = 0;
     } catch (e) {
-      // 既に停止している場合は無視
-    }
-    currentSourceNode = null;
-  }
-
-  // HTMLAudioElement（フォールバック用）も停止
-  for (const audio of activeAudioElements) {
-    try {
-      audio.pause();
-      audio.src = '';
-    } catch (e) {
-      console.error('[Audio] Error stopping audio:', e);
+      console.error('[Audio] Error stopping TTS audio:', e);
     }
   }
-  activeAudioElements.clear();
 
   if (currentAudioElement) {
     try {
@@ -352,6 +342,7 @@ function stopCurrentAudio() {
   console.log('[Audio] All audio stopped');
 }
 
+// HTMLAudioElementを使った再生（バックグラウンド対応）
 async function playAudioUrl(audioUrl: string, speed: number = 1.0): Promise<void> {
   // ユーザー停止フラグをリセット
   isStoppingByUser = false;
@@ -361,69 +352,25 @@ async function playAudioUrl(audioUrl: string, speed: number = 1.0): Promise<void
     await bgmManager.duck();
   }
 
-  const ctx = getAudioContext();
-
-  // AudioContextがsuspendedの場合はresumeを試みる
-  if (ctx.state === 'suspended') {
-    console.log('[Audio] AudioContext is suspended, attempting resume...');
+  return new Promise((resolve, reject) => {
     try {
-      await ctx.resume();
-    } catch (e) {
-      console.error('[Audio] Failed to resume AudioContext:', e);
-    }
-  }
+      const audio = getTtsAudioElement();
 
-  return new Promise(async (resolve, reject) => {
-    try {
-      console.log('[Audio] Playing via Web Audio API...');
+      console.log('[Audio] Playing via HTMLAudioElement (background compatible)...');
 
-      // blob URLからオーディオデータをフェッチ
-      const response = await fetch(audioUrl);
-      const arrayBuffer = await response.arrayBuffer();
+      // 前の再生をクリーンアップ
+      audio.pause();
+      audio.currentTime = 0;
 
-      // オーディオデータをデコード
-      const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+      // イベントハンドラーを設定
+      const onEnded = async () => {
+        audio.removeEventListener('ended', onEnded);
+        audio.removeEventListener('error', onError);
 
-      // 前のSourceNodeがあれば停止
-      if (currentSourceNode) {
-        try {
-          currentSourceNode.stop();
-          currentSourceNode.disconnect();
-        } catch (e) {
-          // 既に停止している場合は無視
-        }
-      }
-
-      // ユーザー停止チェック
-      if (isStoppingByUser) {
-        isStoppingByUser = false;
         if (audioUrl.startsWith('blob:')) {
           URL.revokeObjectURL(audioUrl);
         }
-        resolve();
-        return;
-      }
 
-      // 新しいSourceNodeを作成
-      const sourceNode = ctx.createBufferSource();
-      sourceNode.buffer = audioBuffer;
-      sourceNode.playbackRate.value = speed;
-
-      // GainNodeを通して出力（将来の音量制御用）
-      if (gainNode) {
-        sourceNode.connect(gainNode);
-      } else {
-        sourceNode.connect(ctx.destination);
-      }
-
-      currentSourceNode = sourceNode;
-
-      // 再生終了時のハンドラー
-      sourceNode.onended = async () => {
-        currentSourceNode = null;
-        if (audioUrl.startsWith('blob:')) {
-          URL.revokeObjectURL(audioUrl);
-        }
         // ユーザー停止でなければBGMを戻す
         if (!isStoppingByUser && bgmManager.getIsPlaying()) {
           await bgmManager.unduck();
@@ -431,12 +378,59 @@ async function playAudioUrl(audioUrl: string, speed: number = 1.0): Promise<void
         resolve();
       };
 
+      const onError = (e: Event) => {
+        audio.removeEventListener('ended', onEnded);
+        audio.removeEventListener('error', onError);
+
+        console.error('[Audio] Playback error:', e);
+
+        if (audioUrl.startsWith('blob:')) {
+          URL.revokeObjectURL(audioUrl);
+        }
+
+        if (isStoppingByUser) {
+          isStoppingByUser = false;
+          resolve();
+        } else {
+          reject(new Error('Audio playback failed'));
+        }
+      };
+
+      audio.addEventListener('ended', onEnded);
+      audio.addEventListener('error', onError);
+
+      // 新しい音声を設定
+      audio.src = audioUrl;
+      audio.playbackRate = speed;
+
       // 再生開始
-      sourceNode.start(0);
-      console.log('[Audio] Web Audio playback started');
+      const playPromise = audio.play();
+      if (playPromise) {
+        playPromise
+          .then(() => {
+            console.log('[Audio] HTMLAudioElement playback started');
+          })
+          .catch((e) => {
+            audio.removeEventListener('ended', onEnded);
+            audio.removeEventListener('error', onError);
+
+            console.error('[Audio] Play failed:', e);
+
+            if (audioUrl.startsWith('blob:')) {
+              URL.revokeObjectURL(audioUrl);
+            }
+
+            if (isStoppingByUser) {
+              isStoppingByUser = false;
+              resolve();
+            } else {
+              reject(e);
+            }
+          });
+      }
 
     } catch (e) {
-      console.error('[Audio] Web Audio playback failed:', e);
+      console.error('[Audio] Playback setup failed:', e);
       if (audioUrl.startsWith('blob:')) {
         URL.revokeObjectURL(audioUrl);
       }
@@ -546,6 +540,7 @@ export const useStore = create<AppState>()(
         speed: 1.0,
         programMode: 'simple',  // デフォルトはシンプルモード
         theme: 'light',  // デフォルトはライトテーマ
+        showType: 'politician-watch',  // デフォルトは政治家ウオッチ
       },
       error: null,
 
@@ -1291,6 +1286,7 @@ export const useStore = create<AppState>()(
             // 全ジャンルのPostを並行収集
             const allAnnotations: RelatedPost[] = [];
 
+            const { showType } = audioSettings;
             const collectPromises = PROGRAM_SEGMENTS.map(async (genre) => {
               try {
                 const response = await fetch('/api/collect-posts', {
@@ -1299,6 +1295,7 @@ export const useStore = create<AppState>()(
                   body: JSON.stringify({
                     genre,
                     apiKey: apiConfig.grokApiKey,
+                    showType, // 番組タイプを渡す
                   }),
                 });
 
@@ -1353,6 +1350,7 @@ export const useStore = create<AppState>()(
               allPosts,
               apiKey: apiConfig.geminiApiKey,
               style: 'comprehensive',
+              showType: audioSettings.showType, // 番組タイプを渡す
             }),
           });
 
@@ -1467,11 +1465,20 @@ export const useStore = create<AppState>()(
 
           console.log(`[AIPlayback] Starting from chunk ${startIdx + 1}/${allChunks.length}`);
 
-          // プリフェッチキュー（2つ先まで）
-          const PREFETCH_AHEAD = 2;
+          // プリフェッチキュー（3つ先まで - セクション間移行対応）
+          const PREFETCH_AHEAD = 3;
           const prefetchPromises: Map<number, Promise<string>> = new Map();
 
-          // 初期プリフェッチ（最初の3チャンク）
+          // セクション境界のインデックスを事前計算（セクション間プリフェッチ用）
+          const sectionBoundaries: number[] = [];
+          let boundaryIdx = 0;
+          for (let secIdx = 0; secIdx < aiProgram.sections.length; secIdx++) {
+            boundaryIdx += aiProgram.sections[secIdx].chunks.length;
+            sectionBoundaries.push(boundaryIdx); // 各セクションの終了インデックス+1
+          }
+          console.log(`[AIPlayback] Section boundaries: ${sectionBoundaries.join(', ')}`);
+
+          // 初期プリフェッチ（最初の4チャンク）
           for (let i = startIdx; i < Math.min(startIdx + PREFETCH_AHEAD + 1, allChunks.length); i++) {
             console.log(`[AIPlayback] Initial prefetch chunk ${i + 1}...`);
             prefetchPromises.set(i, generateAudioUrl(allChunks[i].text, ttsConfig));
@@ -1509,6 +1516,25 @@ export const useStore = create<AppState>()(
             if (nextPrefetchIdx < allChunks.length && !prefetchPromises.has(nextPrefetchIdx)) {
               console.log(`[AIPlayback] Prefetch chunk ${nextPrefetchIdx + 1}...`);
               prefetchPromises.set(nextPrefetchIdx, generateAudioUrl(allChunks[nextPrefetchIdx].text, ttsConfig));
+            }
+
+            // セクション間プリフェッチ：セクションの後半（残り2チャンク以下）に入ったら
+            // 次のセクションの最初の数チャンクを積極的にプリフェッチ
+            const currentSection = aiProgram.sections[chunkInfo.secIdx];
+            const remainingInSection = currentSection.chunks.length - chunkInfo.chunkIdx - 1;
+            if (remainingInSection <= 2 && chunkInfo.secIdx < aiProgram.sections.length - 1) {
+              // 次のセクションの開始インデックスを計算
+              const nextSectionStartIdx = sectionBoundaries[chunkInfo.secIdx];
+              const nextSection = aiProgram.sections[chunkInfo.secIdx + 1];
+              const chunksToPrefetch = Math.min(4, nextSection.chunks.length); // 最大4チャンク先読み
+
+              for (let j = 0; j < chunksToPrefetch; j++) {
+                const prefetchIdx = nextSectionStartIdx + j;
+                if (prefetchIdx < allChunks.length && !prefetchPromises.has(prefetchIdx)) {
+                  console.log(`[AIPlayback] Cross-section prefetch: chunk ${prefetchIdx + 1} (${nextSection.title})`);
+                  prefetchPromises.set(prefetchIdx, generateAudioUrl(allChunks[prefetchIdx].text, ttsConfig));
+                }
+              }
             }
 
             // プリフェッチ済みの音声を取得して再生

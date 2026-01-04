@@ -216,6 +216,9 @@ export interface AppState {
 // 番組モード
 export type ProgramMode = 'simple' | 'ai-script';
 
+// 番組タイプID（AI番組モード用）
+export type ShowTypeId = 'politician-watch' | 'old-media-buster' | 'x-timeline-radio';
+
 // テーマ
 export type Theme = 'light' | 'dark';
 
