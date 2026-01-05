@@ -1,12 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-// Gemini APIモデル一覧
+// Gemini APIモデル一覧（2025年最新）
 const GEMINI_MODELS = {
-  'gemini-2.5-flash-lite': 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite-preview-06-17:generateContent',  // 最速
-  'gemini-2.0-flash': 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-001:generateContent',  // 高速
-  'gemini-2.5-flash': 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',  // 高品質
+  'gemini-2.0-flash': 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',  // 高速・安定
+  'gemini-2.5-flash': 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',  // バランス型（推奨）
   'gemini-2.5-pro': 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent',  // 最高品質
-  'gemini-3-flash-preview': 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.0-flash-preview-05-20:generateContent',  // 最新・高性能
 } as const;
 
 type GeminiModel = keyof typeof GEMINI_MODELS;
@@ -26,28 +24,28 @@ const INLINE_SHOW_CONFIGS: Record<string, ShowConfig> = {
     voice: 'echo',
     bgm: 'Cybernetic_Dominion',
     allowDownload: true,
-    geminiModel: 'gemini-2.5-flash',  // 高品質モデル（政治分析向け）
+    geminiModel: 'gemini-2.5-flash',  // バランス型（政治分析向け）
   },
   'old-media-buster': {
     name: 'オールドメディアをぶっ壊せラジオ',
     voice: 'onyx',
     bgm: 'Victory_Lap',
     allowDownload: false,
-    geminiModel: 'gemini-2.5-flash',  // 高品質モデル（皮肉の表現力）
+    geminiModel: 'gemini-2.5-flash',  // バランス型（皮肉の表現力）
   },
   'x-timeline-radio': {
     name: 'X Timeline Radio',
     voice: 'nova',
     bgm: 'Digital_Newsfeed_Groove',
     allowDownload: false,
-    geminiModel: 'gemini-2.5-flash-lite',  // 最速モデル（7コーナー大量生成向け）
+    geminiModel: 'gemini-2.0-flash',  // 高速モデル（7コーナー大量生成向け）
   },
   'disaster-news': {
     name: 'X災害ニュース',
     voice: 'shimmer',
     bgm: 'Digital_Newsfeed_Groove_2026-01-03T112506',
     allowDownload: true,
-    geminiModel: 'gemini-2.5-flash-lite',  // 最速モデル（速報性重視）
+    geminiModel: 'gemini-2.0-flash',  // 高速モデル（速報性重視）
   },
 };
 
