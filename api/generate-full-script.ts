@@ -97,13 +97,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
     };
 
-    // 災害ニュースの場合はGoogle Mapsグラウンディングを有効化
-    // 地名や場所の情報を正確に認識するため
-    if (showType === 'disaster-news') {
-      requestBody.tools = [{ googleMaps: {} }];
-      console.log('[FullScript] Google Maps grounding enabled for disaster news');
-    }
-
     const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
