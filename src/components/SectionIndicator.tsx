@@ -183,7 +183,7 @@ function getGenreShortName(genre?: string, showType?: string): string {
   const disasterNames: Record<string, string> = {
     'damage': '被害',
     'breaking': '速報',
-    'local-voices': '現地',
+    'local-voices': 'X災害',
     'warnings': '警報',
     'infrastructure': '交通',
     'preparedness': '防災',
