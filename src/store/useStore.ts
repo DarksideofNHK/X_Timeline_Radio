@@ -15,6 +15,7 @@ interface AudioSettings {
   programMode: ProgramMode; // 'simple' | 'ai-script'
   theme: Theme; // 'light' | 'dark'
   showType: ShowTypeId; // AI番組モード用の番組タイプ
+  bgmVolume: number; // BGM音量 0-100（パーセント）
 }
 
 // キャッシュ設定（showType別にキャッシュ）
@@ -615,6 +616,7 @@ export const useStore = create<AppState>()(
         programMode: 'simple',  // デフォルトはシンプルモード
         theme: 'light',  // デフォルトはライトテーマ
         showType: 'x-timeline-radio',  // デフォルトはX Timeline Radio
+        bgmVolume: 5,  // デフォルトはかなり小さめ（5%）
       },
       error: null,
 
@@ -1544,11 +1546,12 @@ export const useStore = create<AppState>()(
 
         try {
           // 【重要】BGMを最初に開始（ユーザーがすぐに音が出ることを確認できる）
-          console.log(`[AIPlayback] Starting BGM immediately for ${showType}...`);
+          const bgmVolumeDecimal = (audioSettings.bgmVolume / 100) * 0.02; // 0-100% → 0-0.02
+          console.log(`[AIPlayback] Starting BGM immediately for ${showType} at volume ${audioSettings.bgmVolume}% (${bgmVolumeDecimal.toFixed(4)})`);
 
           // 既存のBGMを停止してから新しく開始（isPlayingフラグをリセット）
           bgmManager.stop();
-          bgmManager.setConfig({ showType, source: 'default', volume: 0.004 });
+          bgmManager.setConfig({ showType, source: 'default', volume: bgmVolumeDecimal });
 
           // BGMを非同期で開始（エラーがあってもTTS再生は続ける）
           bgmManager.start().then(() => {
