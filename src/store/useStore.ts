@@ -359,7 +359,7 @@ function stopCurrentAudio() {
   console.log('[Audio] All audio stopped');
 }
 
-// HTMLAudioElementを使った再生（バックグラウンド対応）
+// HTMLAudioElementを使った再生（バックグラウンド対応・Bluetooth切断対応）
 async function playAudioUrl(audioUrl: string, speed: number = 1.0): Promise<void> {
   // ユーザー停止フラグをリセット
   isStoppingByUser = false;
@@ -379,10 +379,17 @@ async function playAudioUrl(audioUrl: string, speed: number = 1.0): Promise<void
       audio.pause();
       audio.currentTime = 0;
 
-      // イベントハンドラーを設定
-      const onEnded = async () => {
+      // クリーンアップ用の関数
+      const cleanup = () => {
         audio.removeEventListener('ended', onEnded);
         audio.removeEventListener('error', onError);
+        audio.removeEventListener('pause', onPause);
+        if (timeoutId) clearTimeout(timeoutId);
+      };
+
+      // イベントハンドラーを設定
+      const onEnded = async () => {
+        cleanup();
 
         if (audioUrl.startsWith('blob:')) {
           URL.revokeObjectURL(audioUrl);
@@ -396,8 +403,7 @@ async function playAudioUrl(audioUrl: string, speed: number = 1.0): Promise<void
       };
 
       const onError = (e: Event) => {
-        audio.removeEventListener('ended', onEnded);
-        audio.removeEventListener('error', onError);
+        cleanup();
 
         console.error('[Audio] Playback error:', e);
 
@@ -413,8 +419,57 @@ async function playAudioUrl(audioUrl: string, speed: number = 1.0): Promise<void
         }
       };
 
+      // Bluetooth切断などでpauseされた場合の自動再開
+      const onPause = () => {
+        if (isStoppingByUser) {
+          console.log('[Audio] Paused by user stop request');
+          return;
+        }
+
+        // 再生が終了していない場合（Bluetooth切断など）
+        if (audio.currentTime < audio.duration - 0.1) {
+          console.log('[Audio] Paused unexpectedly (possibly Bluetooth disconnection), attempting to resume...');
+
+          // 少し待ってから再生を試みる
+          setTimeout(() => {
+            if (!isStoppingByUser && audio.paused && audio.currentTime < audio.duration - 0.1) {
+              console.log('[Audio] Attempting to resume playback...');
+              audio.play().catch((e) => {
+                console.error('[Audio] Resume failed:', e);
+                // 再開に失敗した場合は次のチャンクに進む
+                cleanup();
+                if (audioUrl.startsWith('blob:')) {
+                  URL.revokeObjectURL(audioUrl);
+                }
+                resolve();
+              });
+            }
+          }, 500);
+        }
+      };
+
+      // タイムアウト設定（音声の長さ + 余裕を持たせる）
+      // 音声の長さが不明な場合は60秒をデフォルトに
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
+      const setPlaybackTimeout = () => {
+        const duration = audio.duration || 60;
+        const timeoutMs = (duration / speed + 10) * 1000; // 再生時間 + 10秒の余裕
+        timeoutId = setTimeout(() => {
+          if (!audio.paused && audio.currentTime < audio.duration - 0.5) {
+            console.log('[Audio] Playback timeout, moving to next chunk');
+            cleanup();
+            if (audioUrl.startsWith('blob:')) {
+              URL.revokeObjectURL(audioUrl);
+            }
+            resolve();
+          }
+        }, timeoutMs);
+      };
+
       audio.addEventListener('ended', onEnded);
       audio.addEventListener('error', onError);
+      audio.addEventListener('pause', onPause);
+      audio.addEventListener('loadedmetadata', setPlaybackTimeout, { once: true });
 
       // 新しい音声を設定
       audio.src = audioUrl;
@@ -429,8 +484,7 @@ async function playAudioUrl(audioUrl: string, speed: number = 1.0): Promise<void
             console.log('[Audio] HTMLAudioElement playback started');
           })
           .catch((e) => {
-            audio.removeEventListener('ended', onEnded);
-            audio.removeEventListener('error', onError);
+            cleanup();
 
             console.error('[Audio] Play failed:', e);
 
