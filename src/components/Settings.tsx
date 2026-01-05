@@ -22,12 +22,16 @@ export function Settings() {
     setTracks(allTracks);
   };
 
+  // BGM音量をパーセント（0-100）から実際の音量（0-0.02）に変換
+  const getBgmVolumeDecimal = (percent: number) => (percent / 100) * 0.02;
+
   const handleBgmToggle = async () => {
     if (bgmEnabled) {
       bgmManager.stop();
       setBgmEnabled(false);
     } else {
-      bgmManager.setConfig({ source: bgmSource, volume: 0.004 });
+      const volumeDecimal = getBgmVolumeDecimal(audioSettings.bgmVolume);
+      bgmManager.setConfig({ source: bgmSource, volume: volumeDecimal });
       await bgmManager.start();
       setBgmEnabled(true);
     }
@@ -37,8 +41,18 @@ export function Settings() {
     setBgmSource(source);
     if (bgmEnabled) {
       bgmManager.stop();
-      bgmManager.setConfig({ source, volume: 0.004 });
+      const volumeDecimal = getBgmVolumeDecimal(audioSettings.bgmVolume);
+      bgmManager.setConfig({ source, volume: volumeDecimal });
       await bgmManager.start();
+    }
+  };
+
+  const handleBgmVolumeChange = (volume: number) => {
+    setAudioSettings({ bgmVolume: volume });
+    // 再生中なら即座に音量を反映
+    if (bgmEnabled) {
+      const volumeDecimal = getBgmVolumeDecimal(volume);
+      bgmManager.setConfig({ volume: volumeDecimal });
     }
   };
 
@@ -281,6 +295,26 @@ export function Settings() {
           >
             {bgmEnabled ? '🔊 BGM ON' : '🔇 BGM OFF'}
           </button>
+        </div>
+
+        {/* BGM音量スライダー */}
+        <div className="mb-4">
+          <label className="block text-sm text-text-secondary mb-2">
+            BGM音量: {audioSettings.bgmVolume}%
+          </label>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={audioSettings.bgmVolume}
+            onChange={(e) => handleBgmVolumeChange(parseInt(e.target.value))}
+            className="w-full h-2 bg-bg-menu rounded-lg appearance-none cursor-pointer accent-accent"
+          />
+          <div className="flex justify-between text-xs text-text-disabled mt-1">
+            <span>0%（オフ）</span>
+            <span>50%</span>
+            <span>100%</span>
+          </div>
         </div>
 
         {/* BGMソース選択 */}
