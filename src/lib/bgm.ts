@@ -180,7 +180,7 @@ class BgmManager {
       }
 
       const effectiveVolume = this.getEffectiveVolume(this.config.volume);
-      const targetVolume = effectiveVolume * 0.5; // 50%まで（下げすぎない）
+      const targetVolume = effectiveVolume * 0.25; // 25%まで（TTS音声を際立たせる）
       const startVolume = this.audioElement.volume;
       const steps = 20;
       const stepDuration = duration / steps;

@@ -485,6 +485,7 @@ interface AppState {
 
   // 再生状態
   isPlaying: boolean;
+  isPreloading: boolean;  // 音声プリロード中
   isInitializing: boolean;
   currentAudio: HTMLAudioElement | null;
   stopRequested: boolean;
@@ -548,6 +549,7 @@ export const useStore = create<AppState>()(
 
       // 再生状態
       isPlaying: false,
+      isPreloading: false,
       isInitializing: false,
       currentAudio: null,
       stopRequested: false,
@@ -1456,19 +1458,21 @@ export const useStore = create<AppState>()(
 
       // AIスクリプト再生
       playAIScript: async () => {
-        const { aiProgram, apiConfig, audioSettings, isPlaying, stopRequested } = get();
+        const { aiProgram, apiConfig, audioSettings, isPlaying, isPreloading, stopRequested } = get();
         if (!aiProgram || aiProgram.sections.length === 0) return;
 
         // 停止リクエストをクリア
         set({ stopRequested: false });
 
-        // 既に再生中なら何もしない
-        if (isPlaying) {
-          console.log('[AIPlayback] Already playing, ignoring...');
+        // 既に再生中またはプリロード中なら何もしない
+        if (isPlaying || isPreloading) {
+          console.log('[AIPlayback] Already playing or preloading, ignoring...');
           return;
         }
 
-        set({ isPlaying: true });
+        // プリロード開始
+        set({ isPreloading: true });
+        console.log('[AIPlayback] Starting preload...');
 
         // Media Sessionを更新
         mediaSessionManager.updateMetadata({
@@ -1476,23 +1480,6 @@ export const useStore = create<AppState>()(
           artist: 'AI番組モード',
           album: `${aiProgram.totalDuration}分の番組`,
         });
-        mediaSessionManager.setPlaybackState('playing');
-
-        // BGMが設定されていれば再生開始（番組タイプ別）
-        if (!bgmManager.getIsPlaying()) {
-          const bgmConfig = bgmManager.getConfig();
-          if (bgmConfig.source !== 'none') {
-            // 番組タイプに応じたBGMを設定
-            bgmManager.setConfig({ showType: audioSettings.showType });
-            console.log(`[AIPlayback] Starting BGM for ${audioSettings.showType}...`);
-            await bgmManager.start();
-          }
-        }
-
-        // AIプログラムのステータスを更新
-        set((state) => ({
-          aiProgram: state.aiProgram ? { ...state.aiProgram, status: 'playing' } : null,
-        }));
 
         const { openaiVoiceId, speed, showType } = audioSettings;
         const ttsConfig: TtsConfig = {
@@ -1538,11 +1525,47 @@ export const useStore = create<AppState>()(
           }
           console.log(`[AIPlayback] Section boundaries: ${sectionBoundaries.join(', ')}`);
 
-          // 初期プリフェッチ（最初の4チャンク）
-          for (let i = startIdx; i < Math.min(startIdx + PREFETCH_AHEAD + 1, allChunks.length); i++) {
-            console.log(`[AIPlayback] Initial prefetch chunk ${i + 1}...`);
+          // 最初のチャンクを先にプリロード（必ず完了を待つ）
+          console.log('[AIPlayback] Preloading first chunk...');
+          const firstChunkPromise = generateAudioUrl(allChunks[startIdx].text, ttsConfig);
+          prefetchPromises.set(startIdx, firstChunkPromise);
+
+          // 最初のチャンクの読み込み完了を待つ
+          const firstAudioUrl = await firstChunkPromise;
+          console.log('[AIPlayback] First chunk preloaded successfully');
+
+          // 停止リクエストチェック（プリロード中に停止された場合）
+          if (get().stopRequested) {
+            console.log('[AIPlayback] Stop requested during preload');
+            set({ isPreloading: false, stopRequested: false });
+            return;
+          }
+
+          // 残りのチャンクをプリフェッチ開始（バックグラウンド）
+          for (let i = startIdx + 1; i < Math.min(startIdx + PREFETCH_AHEAD + 1, allChunks.length); i++) {
+            console.log(`[AIPlayback] Background prefetch chunk ${i + 1}...`);
             prefetchPromises.set(i, generateAudioUrl(allChunks[i].text, ttsConfig));
           }
+
+          // プリロード完了 → 再生開始
+          set({ isPreloading: false, isPlaying: true });
+          mediaSessionManager.setPlaybackState('playing');
+
+          // BGMが設定されていれば再生開始（番組タイプ別）
+          if (!bgmManager.getIsPlaying()) {
+            const bgmConfig = bgmManager.getConfig();
+            if (bgmConfig.source !== 'none') {
+              // 番組タイプに応じたBGMを設定
+              bgmManager.setConfig({ showType: audioSettings.showType });
+              console.log(`[AIPlayback] Starting BGM for ${audioSettings.showType}...`);
+              await bgmManager.start();
+            }
+          }
+
+          // AIプログラムのステータスを更新
+          set((state) => ({
+            aiProgram: state.aiProgram ? { ...state.aiProgram, status: 'playing' } : null,
+          }));
 
           // チャンクを順番に再生
           for (let i = startIdx; i < allChunks.length; i++) {
