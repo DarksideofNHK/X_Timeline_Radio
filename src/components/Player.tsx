@@ -4,6 +4,7 @@ export function Player() {
   const {
     // 共通
     isPlaying,
+    isPreloading,
     stopPlayback,
     audioSettings,
     // シンプルモード
@@ -78,15 +79,15 @@ export function Player() {
           {/* 再生ボタン */}
           <button
             onClick={handlePlayPause}
-            disabled={isPlaying}
+            disabled={isPlaying || isPreloading}
             className={`w-12 h-12 rounded-full flex items-center justify-center text-xl flex-shrink-0 shadow-lg transition-all ${
-              isPlaying
+              isPlaying || isPreloading
                 ? 'bg-gray-400 cursor-not-allowed opacity-50'
                 : 'bg-purple-600 hover:bg-purple-500 text-white'
             }`}
-            title="再生"
+            title={isPreloading ? '読み込み中...' : '再生'}
           >
-            ▶️
+            {isPreloading ? '⏳' : '▶️'}
           </button>
 
           {/* 停止ボタン */}
@@ -108,7 +109,12 @@ export function Player() {
             {/* ステータス行 */}
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                {isPlaying ? (
+                {isPreloading ? (
+                  <span className="flex items-center gap-1.5 text-yellow-600 text-sm font-bold">
+                    <span className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
+                    読み込み中
+                  </span>
+                ) : isPlaying ? (
                   <span className="flex items-center gap-1.5 text-green-600 text-sm font-bold">
                     <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
                     ON AIR
