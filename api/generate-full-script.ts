@@ -6,6 +6,7 @@ const GEMINI_MODELS = {
   'gemini-2.0-flash': 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-001:generateContent',  // 高速
   'gemini-2.5-flash': 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',  // 高品質
   'gemini-2.5-pro': 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent',  // 最高品質
+  'gemini-3-flash': 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.0-flash-preview-05-20:generateContent',  // 最新・高性能
 } as const;
 
 type GeminiModel = keyof typeof GEMINI_MODELS;
