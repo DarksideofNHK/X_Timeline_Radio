@@ -5,6 +5,8 @@ export function SectionIndicator() {
   const aiProgram = useStore((state) => state.aiProgram);
   const currentSectionIndex = useStore((state) => state.currentSectionIndex);
   const currentChunkIndex = useStore((state) => state.currentChunkIndex);
+  const audioSettings = useStore((state) => state.audioSettings);
+  const showType = audioSettings.showType;
 
   if (!aiProgram || !aiProgram.sections || aiProgram.sections.length === 0) {
     return null;
@@ -29,7 +31,7 @@ export function SectionIndicator() {
       {/* 現在のセクション */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="text-2xl">{getSectionIcon(currentSection.type, currentSection.genre)}</span>
+          <span className="text-2xl">{getSectionIcon(currentSection.type, currentSection.genre, showType)}</span>
           <div>
             <h3 className="font-bold text-lg text-text-primary">{currentSection.title}</h3>
             <p className="text-text-secondary text-sm">
@@ -65,11 +67,11 @@ export function SectionIndicator() {
                   : 'bg-bg-menu text-text-secondary'
             }`}
           >
-            {getSectionIcon(section.type, section.genre)}
+            {getSectionIcon(section.type, section.genre, showType)}
             <span className="ml-1 hidden sm:inline">
               {section.type === 'opening' && 'OP'}
               {section.type === 'closing' && 'ED'}
-              {section.type === 'corner' && section.genre?.slice(0, 3)}
+              {section.type === 'corner' && getGenreShortName(section.genre, showType)}
               {section.type === 'transition' && '→'}
             </span>
           </div>
@@ -79,14 +81,25 @@ export function SectionIndicator() {
   );
 }
 
-// セクションタイプとジャンルに応じたアイコン
-function getSectionIcon(type: string, genre?: string): string {
-  if (type === 'opening') return '📻';
-  if (type === 'closing') return '👋';
+// セクションタイプとジャンルに応じたアイコン（番組タイプ対応）
+function getSectionIcon(type: string, genre?: string, showType?: string): string {
+  // 番組タイプ別のオープニング・クロージングアイコン
+  if (type === 'opening') {
+    if (showType === 'politician-watch') return '🥊';
+    if (showType === 'old-media-buster') return '💥';
+    if (showType === 'disaster-news') return '🚨';
+    return '📻';
+  }
+  if (type === 'closing') {
+    if (showType === 'politician-watch') return '🏆';
+    if (showType === 'old-media-buster') return '✊';
+    if (showType === 'disaster-news') return '🙏';
+    return '👋';
+  }
   if (type === 'transition') return '🎵';
 
-  // コーナーの場合はジャンルに応じたアイコン
-  const genreIcons: Record<string, string> = {
+  // X Timeline Radio用
+  const xTimelineIcons: Record<string, string> = {
     trending: '🔥',
     politics: '🏛️',
     economy: '💹',
@@ -96,5 +109,91 @@ function getSectionIcon(type: string, genre?: string): string {
     international: '🌍',
   };
 
-  return genre ? genreIcons[genre] || '📰' : '📰';
+  // 政治家ウオッチ用
+  const politicianIcons: Record<string, string> = {
+    'ruling-ldp': '🔴',
+    'ruling-komeito': '🟡',
+    'opposition-cdp': '🔵',
+    'opposition-ishin': '🟠',
+    'opposition-dpfp': '🟢',
+    'opposition-others': '🟣',
+    'public-reaction': '💬',
+  };
+
+  // オールドメディア用
+  const oldMediaIcons: Record<string, string> = {
+    'nhk': '📺',
+    'newspapers': '📰',
+    'tv-stations': '📡',
+  };
+
+  // 災害ニュース用
+  const disasterIcons: Record<string, string> = {
+    'earthquake': '🌊',
+    'weather': '🌧️',
+    'landslide': '⛰️',
+    'typhoon': '🌀',
+    'damage': '📢',
+    'safety': '🏠',
+  };
+
+  // 番組タイプに応じてアイコンマップを選択
+  let icons = xTimelineIcons;
+  if (showType === 'politician-watch') icons = politicianIcons;
+  if (showType === 'old-media-buster') icons = oldMediaIcons;
+  if (showType === 'disaster-news') icons = disasterIcons;
+
+  return genre ? icons[genre] || '📰' : '📰';
+}
+
+// ジャンルの短縮名を取得（番組タイプ対応）
+function getGenreShortName(genre?: string, showType?: string): string {
+  if (!genre) return '';
+
+  // X Timeline Radio用
+  const xTimelineNames: Record<string, string> = {
+    trending: 'バズ',
+    politics: '政治',
+    economy: '経済',
+    lifestyle: '生活',
+    entertainment: '芸能',
+    science: '科学',
+    international: '国際',
+  };
+
+  // 政治家ウオッチ用
+  const politicianNames: Record<string, string> = {
+    'ruling-ldp': '自民',
+    'ruling-komeito': '公明',
+    'opposition-cdp': '立民',
+    'opposition-ishin': '維新',
+    'opposition-dpfp': '国民',
+    'opposition-others': '他党',
+    'public-reaction': '反応',
+  };
+
+  // オールドメディア用
+  const oldMediaNames: Record<string, string> = {
+    'nhk': 'NHK',
+    'newspapers': '新聞',
+    'tv-stations': '民放',
+  };
+
+  // 災害ニュース用
+  const disasterNames: Record<string, string> = {
+    'earthquake': '地震',
+    'weather': '気象',
+    'landslide': '土砂',
+    'typhoon': '台風',
+    'damage': '被害',
+    'safety': '安全',
+  };
+
+  // 番組タイプに応じて名前マップを選択
+  let names = xTimelineNames;
+  if (showType === 'politician-watch') names = politicianNames;
+  if (showType === 'old-media-buster') names = oldMediaNames;
+  if (showType === 'disaster-news') names = disasterNames;
+
+  return names[genre] || genre.slice(0, 3);
 }
