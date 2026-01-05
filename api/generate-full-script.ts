@@ -1,33 +1,52 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-// Gemini API（gemini-2.0-flash-001: 高速モデル、タイムアウト対策）
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-001:generateContent';
+// Gemini APIモデル一覧
+const GEMINI_MODELS = {
+  'gemini-2.5-flash-lite': 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite-preview-06-17:generateContent',  // 最速
+  'gemini-2.0-flash': 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-001:generateContent',  // 高速
+  'gemini-2.5-flash': 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',  // 高品質
+  'gemini-2.5-pro': 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent',  // 最高品質
+} as const;
+
+type GeminiModel = keyof typeof GEMINI_MODELS;
 
 // 番組タイプ設定（インライン定義）
-const INLINE_SHOW_CONFIGS: Record<string, { name: string; voice: string; bgm: string; allowDownload: boolean }> = {
+interface ShowConfig {
+  name: string;
+  voice: string;
+  bgm: string;
+  allowDownload: boolean;
+  geminiModel: GeminiModel;  // 使用するGeminiモデル
+}
+
+const INLINE_SHOW_CONFIGS: Record<string, ShowConfig> = {
   'politician-watch': {
     name: 'X政治家ウオッチ',
     voice: 'echo',
     bgm: 'Cybernetic_Dominion',
     allowDownload: true,
+    geminiModel: 'gemini-2.5-flash',  // 高品質モデル（政治分析向け）
   },
   'old-media-buster': {
     name: 'オールドメディアをぶっ壊せラジオ',
     voice: 'onyx',
     bgm: 'Victory_Lap',
     allowDownload: false,
+    geminiModel: 'gemini-2.5-flash',  // 高品質モデル（皮肉の表現力）
   },
   'x-timeline-radio': {
     name: 'X Timeline Radio',
     voice: 'nova',
     bgm: 'Digital_Newsfeed_Groove',
     allowDownload: false,
+    geminiModel: 'gemini-2.5-flash-lite',  // 最速モデル（7コーナー大量生成向け）
   },
   'disaster-news': {
     name: 'X災害ニュース',
-    voice: 'shimmer',  // 落ち着いた声で災害情報を伝える
+    voice: 'shimmer',
     bgm: 'Digital_Newsfeed_Groove_2026-01-03T112506',
-    allowDownload: true,  // 防災情報として共有可能
+    allowDownload: true,
+    geminiModel: 'gemini-2.5-flash-lite',  // 最速モデル（速報性重視）
   },
 };
 
@@ -85,7 +104,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       prompt = generateXTimelineRadioPrompt(allPosts, month, day, weekday, todayString);
     }
 
-    console.log(`[FullScript] Generating script for showType: ${showType || 'x-timeline-radio'}`);
+    // 番組タイプに応じたGeminiモデルURLを取得
+    const geminiModel = showConfig.geminiModel;
+    const geminiApiUrl = GEMINI_MODELS[geminiModel];
+    console.log(`[FullScript] Generating script for showType: ${showType || 'x-timeline-radio'} using model: ${geminiModel}`);
 
     // リクエストボディを構築
     const requestBody: any = {
@@ -97,7 +119,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
     };
 
-    const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+    const response = await fetch(`${geminiApiUrl}?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(requestBody),
