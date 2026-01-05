@@ -27,7 +27,7 @@ export function Settings() {
       bgmManager.stop();
       setBgmEnabled(false);
     } else {
-      bgmManager.setConfig({ source: bgmSource, volume: 0.06 });
+      bgmManager.setConfig({ source: bgmSource, volume: 0.034 });
       await bgmManager.start();
       setBgmEnabled(true);
     }
@@ -37,7 +37,7 @@ export function Settings() {
     setBgmSource(source);
     if (bgmEnabled) {
       bgmManager.stop();
-      bgmManager.setConfig({ source, volume: 0.06 });
+      bgmManager.setConfig({ source, volume: 0.034 });
       await bgmManager.start();
     }
   };
