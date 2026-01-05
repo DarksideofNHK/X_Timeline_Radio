@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-// Gemini API
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent';
+// Gemini API（gemini-2.5-flash: Google Mapsグラウンディング対応）
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
 // 番組タイプ設定（インライン定義）
 const INLINE_SHOW_CONFIGS: Record<string, { name: string; voice: string; bgm: string; allowDownload: boolean }> = {
@@ -87,17 +87,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     console.log(`[FullScript] Generating script for showType: ${showType || 'x-timeline-radio'}`);
 
+    // リクエストボディを構築
+    const requestBody: any = {
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.85,
+        maxOutputTokens: 65536,
+        responseMimeType: 'application/json',
+      },
+    };
+
+    // 災害ニュースの場合はGoogle Mapsグラウンディングを有効化
+    // 地名や場所の情報を正確に認識するため
+    if (showType === 'disaster-news') {
+      requestBody.tools = [{ googleMaps: {} }];
+      console.log('[FullScript] Google Maps grounding enabled for disaster news');
+    }
+
     const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.85,
-          maxOutputTokens: 65536,
-          responseMimeType: 'application/json',
-        },
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
@@ -667,22 +677,27 @@ ${allPostsText || '（該当なし）'}
 }
 
 // ========================================
-// X災害ニュース用プロンプト
+// X災害ニュース用プロンプト（速報性・ライブ感重視版）
 // ========================================
 function generateDisasterNewsPrompt(allPosts: any, month: number, day: number, weekday: string, todayString: string): string {
+  // 新しいジャンル構成（被害情報を充実）
   const genreInfo: Record<string, { name: string; icon: string }> = {
-    'earthquake': { name: '地震・津波', icon: '🌊' },
-    'weather': { name: '気象警報', icon: '🌧️' },
-    'landslide': { name: '土砂・洪水', icon: '⛰️' },
-    'typhoon': { name: '台風・暴風', icon: '🌀' },
-    'damage': { name: '被害状況', icon: '📢' },
-    'safety': { name: '避難・安全', icon: '🏠' },
+    'damage': { name: '被害情報', icon: '🔥' },
+    'breaking': { name: '速報', icon: '🚨' },
+    'local-voices': { name: '現地の声', icon: '📢' },
+    'warnings': { name: '警報・注意報', icon: '⚠️' },
+    'infrastructure': { name: '交通・ライフライン', icon: '🚃' },
+    'preparedness': { name: '防災情報', icon: '🛡️' },
   };
 
   let allPostsText = '';
   let hasAnyPosts = false;
 
-  for (const [genreId, posts] of Object.entries(allPosts)) {
+  // 被害情報を2番目に配置、防災情報は最後
+  const genreOrder = ['damage', 'breaking', 'local-voices', 'warnings', 'infrastructure', 'preparedness'];
+
+  for (const genreId of genreOrder) {
+    const posts = allPosts[genreId];
     if (!Array.isArray(posts) || posts.length === 0) continue;
     const info = genreInfo[genreId];
     if (!info) continue;
@@ -690,125 +705,210 @@ function generateDisasterNewsPrompt(allPosts: any, month: number, day: number, w
     hasAnyPosts = true;
     const postsText = posts.map((p: any, i: number) => {
       const location = p.location ? `【場所: ${p.location}】` : '';
-      const disasterType = p.disasterType ? `【災害: ${p.disasterType}】` : '';
-      const severity = p.severity ? `【深刻度: ${p.severity}】` : '';
-      const sourceType = p.sourceType ? `【情報源: ${p.sourceType}】` : '';
-      return `${i + 1}. @${p.author?.username || 'user'}（${p.author?.name || 'ユーザー'}）${location}${disasterType}${severity}${sourceType}\n   「${p.text?.replace(/\n/g, ' ').slice(0, 400)}」`;
+      const sourceType = p.source_type ? `【情報源: ${p.source_type}】` : '';
+      const postedTime = p.posted_time ? `【${p.posted_time}】` : '';
+      return `${i + 1}. @${p.author?.username || p.author_username || 'user'}（${p.author?.name || p.author_name || 'ユーザー'}）${location}${sourceType}${postedTime}\n   「${p.text?.replace(/\n/g, ' ').slice(0, 400)}」`;
     }).join('\n\n');
 
     allPostsText += `\n### ${info.icon} ${info.name}（${posts.length}件）\n${postsText}\n`;
   }
 
-  return `あなたは「X災害ニュース」の台本作家です。全国の災害情報を伝える防災ラジオ番組を作ります。
+  // 現在時刻を取得
+  const now = new Date();
+  const japanNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
+  const hours = japanNow.getHours();
+  const minutes = japanNow.getMinutes();
+  const currentTime = `${hours}時${minutes}分`;
+
+  return `あなたは「X災害ニュース」のライブ台本作家です。**今まさに起きていること**を伝える速報番組を作ります。
+
+【★Google Mapsグラウンディング活用★】
+この台本ではGoogle Mapsの地理情報データを活用できます。以下に注意してください：
+- 投稿に含まれる地名が正確かどうか、Google Mapsで確認してください
+- 「○○市は△△県の北部に位置し」のような地理的コンテキストを適宜追加
+- 災害発生地域の周辺情報（近くの主要都市、河川名など）も補足可能
+- 避難所や公共施設の正確な場所情報があれば活用
+
+【★最重要：ライブニュース感★】
+この番組は「録音」ではなく「生放送」のつもりで書いてください：
+- 「たった今入った情報です」「○時○分現在の状況です」
+- 「先ほど△△から報告がありました」
+- 「現在も状況は続いています」「引き続き警戒が必要です」
+- 時刻や「現在」「今」という言葉を多用して臨場感を出す
+- 情報の鮮度を常に意識した語り口
 
 【番組コンセプト】
-Xに投稿されたリアルタイムの災害情報を収集し、全国津々浦々の災害状況を伝える。
-気象庁発表だけでは拾えない、現地からの生の声も含めて防災に役立つ情報を届ける。
+Xに投稿されたリアルタイムの災害情報を**速報形式**で伝える。
+気象庁発表と現地からの生の声を織り交ぜ、**今何が起きているか**を明確に伝える。
+Google Mapsの地理情報を活用し、より正確で分かりやすい位置情報を提供する。
 
 【パーソナリティキャラクター】
-- 落ち着いた声で情報を伝える
-- 「現在の状況をお伝えします」「ご注意ください」のような表現
-- 不安を煽りすぎず、危険性は明確に伝える
-- 場所と状況を具体的に伝える
-- 公式情報と現地情報を区別して伝える
+- ニュースキャスター風の落ち着いた、しかし緊迫感のある語り口
+- 「速報です」「現在の状況をお伝えします」
+- 危険性は明確に、しかしパニックを煽らない
+- 公式情報と現地情報を明確に区別（「気象庁によると」「現地の方の投稿では」）
 
 【重要：読み上げ専用テキスト】
 scriptには「そのまま声に出して読める文章」のみを書いてください。
 - ❌ 演出指示やカッコ書き
 - ❌ ふりがな・読み仮名の括弧書き（例：「災害（さいがい）」は禁止）
 - ✅ パーソナリティが話す言葉のみ
-- ✅ 普通の日本語文章として自然に読める形式
 
 【重要：地名は積極的にひらがな化】
 地名は読み間違いが多いため、**市区町村名はひらがなで書く**こと：
 - ✅「いしかわ県わじま市」「にいがた県じょうえつ市」「みやざき県にちなん市」
 - ✅「ほっかいどう」「あおもり県」「いわて県」「あきた県」
-- ✅「とくしま県」「こうち県」「えひめ県」「かがわ県」
 - ❌ 括弧書きのふりがなは禁止（「輪島市（わじまし）」はダメ）
 - 東京、大阪、京都、名古屋など超有名都市のみ漢字OK
 
 【重要：数値と単位】
 - 震度は「震度○」とはっきり読む
-- 雨量は「○ミリ」
-- 風速は「秒速○メートル」
-- 年月日は普通に「2026年1月5日」でOK（ふりがな不要）
+- 雨量は「○ミリ」、風速は「秒速○メートル」
+
+【重要：誤読されやすい語句はひらがなで】
+TTSが誤読しやすい語句は、ひらがなで書いてください：
+- 「今日」→「きょう」（「こんにち」と誤読される）
+- 「今朝」→「けさ」
+- 「今夜」→「こんや」
+- 「明日」→「あした」または「あす」
+- 「昨日」→「きのう」
+- 「一昨日」→「おととい」
+- 「今」→「いま」
+- 「何時」→「なんじ」
+- 「日本海側」→「にほんかいがわ」（「にち ほんかいがわ」と誤読される）
+- 「太平洋側」→「たいへいようがわ」
+- 「東日本」→「ひがしにほん」
+- 「西日本」→「にしにほん」
+- 「北日本」→「きたにほん」
+- 「○棟」→「○むね」（建物の数え方。「とう」は誤り）
+- 「○軒」→「○けん」（家の数え方）
+- 「○戸」→「○こ」（住戸の数え方）
+- 「事案」→「じあん」（「こと あん」は誤り）
+- 「事象」→「じしょう」
+- 「事態」→「じたい」
 
 【番組概要】
 - 番組名: X災害ニュース
 - 今日の日付: ${todayString}
+- 現在時刻: ${currentTime}
 
 【収集した投稿】
-${allPostsText || '（本日は大きな災害情報はありません）'}
+${allPostsText || '（現在、大きな災害情報は入っていません）'}
 
-【番組構成】
+【★超重要：投稿の引用★】
+**収集した投稿は全て台本に組み込んでください。1件も省略しないこと！**
+これはXの投稿を紹介する番組です。投稿を引用しないと番組の意味がありません。
 
-1. **オープニング**（30-45秒）
-   - 「X災害ニュース、${month}月${day}日${weekday}曜日版です」
-   - 「Xに投稿された全国の災害情報をお伝えします」
-   - 今日の概況（大きな災害があれば簡潔に）
+**各投稿の紹介形式：**
+1. 投稿者の紹介（「○○さんの投稿です」）
+2. 投稿内容を原文で読み上げ（「」で囲む、URLは省略）
+3. 一言コメント（「現地の緊迫感が伝わってきますね」など）
+
+**引用例：**
+- 「にいがた市にお住まいのタナカさんの投稿です。『今すごい揺れた！棚から物が落ちてきた。みんな大丈夫？』　現地の緊迫感が伝わってきますね。」
+- 「気象庁の公式アカウントからです。『○○地方に大雨警報を発表しました』　該当地域の方はご注意ください。」
+- 「続いてサトウさんの投稿。『うちの前の道路が冠水してる。車は無理。写真あげます』　現地の状況がよく分かりますね。」
+
+【番組構成】★被害情報を充実★
+
+1. **オープニング**（20-30秒）
+   - 「X災害ニュース、${currentTime}現在の情報をお伝えします」
+   - 緊急度の高い情報があれば「まず速報です」で始める
 ${hasAnyPosts ? `
-2. **地震・津波コーナー**（2-3分）
-   - 地震速報、津波警報・注意報の情報
-   - 現地からの揺れの報告
-   - 「○○地方では注意が必要です」
+2. **被害情報コーナー**（3-4分）★オープニング直後に配置★
+   - 「まず、現在発生している被害の状況からお伝えします」
+   - **収集した被害情報ジャンルの投稿を全て紹介**
+   - 火災、建物被害、人的被害などを具体的に
+   - 「○○市で火災が発生し、現在も消火活動が続いています」
+   - 「△△さんの投稿です。『現場から煙が見える』」
 
-3. **気象警報コーナー**（2-3分）
-   - 大雨、暴風、大雪などの警報情報
-   - 線状降水帯の発生情報
-   - 「外出を控えてください」などの注意喚起
+3. **速報コーナー**（2-3分）
+   - 「続いて、緊急性の高い速報です」
+   - **収集した速報ジャンルの投稿を全て紹介**
+   - 地震、津波警報、特別警報などの速報
 
-4. **土砂・洪水コーナー**（2-3分）
-   - 土砂災害警戒情報
-   - 河川の氾濫・決壊情報
-   - 避難が必要なエリアの案内
+4. **現地の声コーナー**（2-3分）
+   - 「現地から届いている投稿をご紹介します」
+   - **収集した現地の声ジャンルの投稿を全て紹介**
+   - 一般ユーザーの生の声を臨場感を持って伝える
+   - 「○○にお住まいの△△さんの投稿です。『投稿内容』」の形式で
 
-5. **台風・暴風コーナー**（2-3分）
-   - 台風の進路情報
-   - 竜巻・突風の発生報告
-   - 停電情報
+5. **警報・注意報コーナー**（2分）
+   - 「ここで公式の警報・注意報情報です」
+   - **収集した警報ジャンルの投稿を全て紹介**
+   - 気象庁など公式アカウントの投稿を優先的に読み上げ
 
-6. **被害状況コーナー**（2-3分）
-   - 現地からの被害報告
-   - インフラ被害（停電、断水、通行止め）
-   - 交通機関の運休情報
+6. **交通・ライフラインコーナー**（2分）
+   - 「生活に影響する情報をまとめてお伝えします」
+   - **収集した交通・ライフラインジャンルの投稿を全て紹介**
+   - 運休、通行止め、停電などの投稿を具体的に紹介
 
-7. **避難・安全コーナー**（2-3分）
-   - 避難所開設情報
-   - 救助活動の状況
-   - 復旧の見通し
+7. **防災情報コーナー**（1-2分）★エンディング前に配置★
+   - 「最後に、防災に関する情報です」
+   - **収集した防災情報ジャンルの投稿を全て紹介**
+   - 避難所開設、避難指示、備えの呼びかけなど
 
-8. **エンディング**（30-45秒）
-   - 「以上、本日の災害情報をお伝えしました」
+8. **エンディング**（20-30秒）
+   - 「以上、${currentTime}現在のX災害ニュースでした」
    - 「最新情報は気象庁やお住まいの自治体でご確認ください」
    - 「どうか安全にお過ごしください」
 ` : `
-2. **本日の状況**（1-2分）
-   - 「本日は大きな災害の報告はありませんでした」
+2. **本日の状況**（1分）
+   - 「現在、緊急性の高い災害情報は入っていません」
    - 「引き続き、気象情報にご注意ください」
-   - 日頃からの防災意識の呼びかけ
 
-3. **エンディング**（30秒）
+3. **エンディング**（20秒）
    - 「X災害ニュースでした」
-   - 「いざという時に備えて、避難場所の確認を」
 `}
 
 【出力形式】
 \`\`\`json
 {
   "sections": [
-    { "id": "opening", "type": "opening", "title": "オープニング", "script": "読み上げテキスト", "estimatedDuration": 45 },
-    { "id": "earthquake", "type": "corner", "genre": "earthquake", "title": "地震・津波速報", "script": "読み上げテキスト", "estimatedDuration": 150 },
-    { "id": "weather", "type": "corner", "genre": "weather", "title": "気象警報", "script": "読み上げテキスト", "estimatedDuration": 150 },
-    { "id": "landslide", "type": "corner", "genre": "landslide", "title": "土砂・洪水情報", "script": "読み上げテキスト", "estimatedDuration": 150 },
-    { "id": "typhoon", "type": "corner", "genre": "typhoon", "title": "台風・暴風情報", "script": "読み上げテキスト", "estimatedDuration": 150 },
-    { "id": "damage", "type": "corner", "genre": "damage", "title": "被害状況", "script": "読み上げテキスト", "estimatedDuration": 150 },
-    { "id": "safety", "type": "corner", "genre": "safety", "title": "避難・安全情報", "script": "読み上げテキスト", "estimatedDuration": 150 },
-    { "id": "ending", "type": "closing", "title": "エンディング", "script": "読み上げテキスト", "estimatedDuration": 45 }
+    {
+      "id": "opening",
+      "type": "opening",
+      "title": "オープニング",
+      "script": "X災害ニュース、14時30分現在の情報をお伝えします。きょうは各地で火災や大雨の被害が報告されています。",
+      "estimatedDuration": 30
+    },
+    {
+      "id": "damage",
+      "type": "corner",
+      "genre": "damage",
+      "title": "被害情報",
+      "script": "まず、現在発生している被害の状況からお伝えします。さいたま市で住宅火災が発生しています。消防によると、午前10時ごろ出火し、いま現在も消火活動が続いているとのことです。現地のスズキさんの投稿です。『近所で火事。消防車が5台くらい来てる。煙がすごい』　現場の緊迫した状況が伝わってきます。続いてタカハシさん。『3むね燃えてるみたい。住民は避難したって』　けが人がいないことを祈ります。",
+      "estimatedDuration": 180
+    },
+    {
+      "id": "breaking",
+      "type": "corner",
+      "genre": "breaking",
+      "title": "速報",
+      "script": "続いて、緊急性の高い速報です。気象庁の公式アカウントからです。『いしかわ県のとおり地方に大雨警報を発表しました。土砂災害に警戒してください』　該当地域の方は十分ご注意ください。",
+      "estimatedDuration": 120
+    },
+    {
+      "id": "local-voices",
+      "type": "corner",
+      "genre": "local-voices",
+      "title": "現地の声",
+      "script": "現地から届いている投稿をご紹介します。のと町にお住まいのタナカさんの投稿です。『うちの前の道路が冠水してる。車は無理』　写真も投稿されていて、現地の状況がよく分かります。続いてサトウさん。『停電した。懐中電灯探してる』　ライフラインにも影響が出ているようです。",
+      "estimatedDuration": 150
+    },
+    {
+      "id": "preparedness",
+      "type": "corner",
+      "genre": "preparedness",
+      "title": "防災情報",
+      "script": "最後に、防災に関する情報です。かなざわ市の公式アカウントからです。『○○公民館を避難所として開設しました』　お近くの方はご利用ください。",
+      "estimatedDuration": 90
+    }
   ]
 }
 \`\`\`
 
-${hasAnyPosts ? '投稿がないジャンルは省略してもOK。' : '本日は災害がないため、短い番組構成で。'}
+${hasAnyPosts ? '**重要：収集した投稿は必ず全て台本に含めること。投稿がないジャンルのみ省略可。**' : '災害がないため、短い番組構成で。'}
 台本をJSON形式で出力してください。`;
 }
 

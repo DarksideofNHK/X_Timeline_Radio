@@ -70,12 +70,18 @@ const INLINE_SHOW_TYPES: Record<string, { name: string; genres: Array<{ id: stri
   'disaster-news': {
     name: 'X災害ニュース',
     genres: [
-      { id: 'earthquake', name: '地震・津波', icon: '🌊', query: '(地震 OR 津波 OR 震度 OR 緊急地震速報 OR 揺れ OR 余震) (発生 OR 速報 OR 注意 OR 警報 OR 避難)' },
-      { id: 'weather', name: '気象警報', icon: '🌧️', query: '(豪雨 OR 大雨 OR 暴風 OR 大雪 OR 警報 OR 特別警報 OR 線状降水帯 OR 記録的短時間大雨) (被害 OR 注意 OR 避難 OR 冠水 OR 浸水)' },
-      { id: 'landslide', name: '土砂・洪水', icon: '⛰️', query: '(土砂崩れ OR 土砂災害 OR 崖崩れ OR 洪水 OR 氾濫 OR 決壊 OR 河川 OR 堤防) (警戒 OR 被害 OR 避難 OR 発生)' },
-      { id: 'typhoon', name: '台風・暴風', icon: '🌀', query: '(台風 OR 竜巻 OR 突風 OR 暴風 OR 強風 OR 停電) (接近 OR 上陸 OR 被害 OR 注意 OR 警戒)' },
-      { id: 'damage', name: '被害状況', icon: '📢', query: '(被害 OR 停電 OR 断水 OR 孤立 OR 通行止め OR 運休 OR 欠航) (現地 OR 状況 OR 復旧 OR 確認)' },
-      { id: 'safety', name: '避難・安全', icon: '🏠', query: '(避難所 OR 避難勧告 OR 避難指示 OR 安否確認 OR 救助 OR 自衛隊 OR 消防 OR 復旧) (開設 OR 情報 OR 活動 OR 支援)' },
+      // 被害情報を最初に（速報の次に配置）
+      { id: 'damage', name: '被害情報', icon: '🔥', query: '(火災 OR 火事 OR 焼失 OR 全焼 OR 半焼 OR 倒壊 OR 損壊 OR 浸水被害 OR 土砂崩れ OR 家屋 OR 建物) (被害 OR 発生 OR 出動 OR 現場 OR 消火)' },
+      // 速報
+      { id: 'breaking', name: '速報', icon: '🚨', query: '(緊急地震速報 OR 特別警報 OR 津波警報 OR 震度5 OR 震度6 OR 震度7 OR 氾濫 OR 決壊) (速報 OR 発生 OR 警戒 OR 避難)' },
+      // 現地の声
+      { id: 'local-voices', name: '現地の声', icon: '📢', query: '(揺れた OR 停電した OR 浸水 OR 冠水 OR やばい OR すごい雨 OR すごい雪 OR 避難中) (今 OR さっき OR 現在)' },
+      // 警報・注意報
+      { id: 'warnings', name: '警報・注意報', icon: '⚠️', query: '(from:JMA_kishou OR from:FDMA_JAPAN OR 気象庁 OR 消防庁) (警報 OR 注意報 OR 警戒 OR 発表)' },
+      // 交通・ライフライン
+      { id: 'infrastructure', name: '交通・ライフライン', icon: '🚃', query: '(運休 OR 運転見合わせ OR 通行止め OR 停電 OR 断水 OR 欠航) (現在 OR 影響 OR 復旧)' },
+      // 防災情報（エンディング前）
+      { id: 'preparedness', name: '防災情報', icon: '🛡️', query: '(避難所 OR 避難指示 OR 防災 OR 備え OR ハザードマップ OR 非常食 OR 備蓄) (開設 OR 確認 OR 準備 OR 情報)' },
     ],
   },
 };
@@ -569,36 +575,74 @@ async function collectDisasterPosts(
   const fromDate = new Date(now.getTime() - 12 * 60 * 60 * 1000).toISOString().split('T')[0];
   const toDate = now.toISOString().split('T')[0];
 
+  // ジャンル別の収集指示
+  const genreInstructions: Record<string, string> = {
+    'damage': `
+【被害情報コーナー】現在発生している被害を詳しく収集
+★優先順位★
+1. 火災発生・消火活動の状況（○棟焼失、消防車出動など）
+2. 建物の倒壊・損壊情報
+3. 浸水・冠水被害の状況
+4. 人的被害の情報（けが人、救助など）
+5. 土砂崩れ・がけ崩れの発生
+→ 消防・警察の公式情報と現地の声を両方集める
+→ 具体的な数字（○棟、○人、○台など）を含む投稿を優先`,
+    'breaking': `
+【速報コーナー】最も緊急性の高い災害情報を収集
+★優先順位★
+1. 緊急地震速報、津波警報、特別警報の発表
+2. 震度5以上の地震発生報告
+3. 河川氾濫・堤防決壊の速報
+→ 公式発表と、現地からの「今！」という声を両方集める`,
+    'local-voices': `
+【現地の声コーナー】一般ユーザーのリアルタイム報告を中心に収集
+★優先順位★
+1. 「今揺れた」「停電した」「浸水してる」などの現在進行形の報告
+2. 写真・動画付きの被害状況投稿
+3. 「○○市住みだけど」のような地元民の体験談
+4. 避難中・被災中の人の状況報告
+→ 公式より一般ユーザーを多めに（7:3くらい）`,
+    'warnings': `
+【警報・注意報コーナー】公式情報を中心に収集
+★優先順位★
+1. 気象庁の警報・注意報発表
+2. 自治体の避難情報
+3. 消防・警察の注意喚起
+4. 報道機関の速報
+→ 公式アカウントを中心に（8:2くらい）`,
+    'infrastructure': `
+【交通・ライフラインコーナー】生活への影響を収集
+★優先順位★
+1. 鉄道・バスの運休・遅延情報
+2. 道路の通行止め情報
+3. 停電・断水の状況
+4. 空港・航空便の欠航情報
+→ 公式と現地の声を半々で`,
+    'preparedness': `
+【防災情報コーナー】避難・備えの情報を収集
+★優先順位★
+1. 避難所の開設情報
+2. 避難指示・避難勧告
+3. 防災グッズ・備蓄の情報
+4. ハザードマップの確認呼びかけ
+→ 公式情報を中心に`
+  };
+
+  const instruction = genreInstructions[genreConfig.id] || '';
+
   const prompt = `
-あなたは日本全国の災害情報を収集するXキュレーターです。
+あなたは災害情報の速報キュレーターです。**今まさに起きていること**を集めてください。
 
 【番組】X災害ニュース
 【ジャンル】${genreConfig.name}
 【検索クエリ】${genreConfig.query}
-【条件】直近24時間以内の日本語Post
+【条件】直近6時間以内の日本語Post（新しいものを優先）
+${instruction}
 
-【★最重要★ 公式と一般ユーザーをバランスよく収集】
-
-このジャンルについて、以下の2種類の投稿を**必ず両方**収集してください：
-
-■ 公式アカウントの投稿（5件）:
-- 気象庁（@JMA_kishou）の警報・注意報
-- 各地の自治体・市区町村の公式アカウント
-- 消防・警察の公式アカウント
-- NHK、報道機関の速報
-
-■ 一般ユーザーの投稿（5件）:
-- 現地住民の目撃情報・体験談
-- 「今揺れた」「雪がすごい」「停電した」などのリアルタイム報告
-- 被害状況の写真・動画付き投稿
-- 避難中の人の状況報告
-- 「○○市に住んでるけど」のような現地の声
-
-【収集のコツ】
-- 公式アカウントは「from:JMA_kishou」「from:○○市」などで検索
-- 一般ユーザーは「揺れた」「やばい」「すごい」「停電」「避難」などの生の言葉で検索
-- 具体的な地名が含まれる投稿を優先
-- リツイート数やいいね数が多い投稿は注目度が高い
+【★速報性を最重視★】
+- 「○時○分現在」「たった今」「今」を含む投稿を優先
+- 投稿時刻が新しいものを上位に
+- 進行中の災害 > 過去の災害報告
 
 【出力形式】
 \`\`\`json
@@ -607,23 +651,19 @@ async function collectDisasterPosts(
     {
       "author_username": "ユーザー名",
       "author_name": "表示名",
-      "text": "投稿内容（全文、省略しない）",
+      "text": "投稿内容（全文）",
       "url": "https://x.com/username/status/投稿ID",
       "likes": 数値,
       "retweets": 数値,
-      "location": "場所（都道府県・市区町村）",
-      "disaster_type": "災害種類",
+      "location": "場所",
+      "posted_time": "投稿時刻（分かれば）",
       "source_type": "公式/報道/現地住民/一般"
     }
   ]
 }
 \`\`\`
 
-【重要】
-- 必ず10件出力（公式5件＋一般ユーザー5件）
-- 実在する投稿のみ
-- source_typeで公式か一般かを明記
-- 一般ユーザーの生の声を必ず含める`;
+10件出力。実在する投稿のみ。新しい投稿を優先。`;
 
   try {
     const response = await fetch(GROK_API_URL, {
