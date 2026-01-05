@@ -46,7 +46,7 @@ class BgmManager {
   private isMobile: boolean;
   private config: BgmConfig = {
     source: 'default', // デフォルトBGMをデフォルトに
-    volume: 0.004, // -18dB追加調整後（旧: 0.034 → 0.004）パーソナリティの声を優先
+    volume: 0.0025, // デフォルト5%（0.05 * 0.05 = 0.0025）
     showType: 'x-timeline-radio', // デフォルトはX Timeline Radio
   };
 
@@ -66,7 +66,9 @@ class BgmManager {
   setConfig(config: Partial<BgmConfig>) {
     this.config = { ...this.config, ...config };
     if (this.audioElement) {
-      this.audioElement.volume = this.getEffectiveVolume(this.config.volume);
+      const newVolume = this.getEffectiveVolume(this.config.volume);
+      this.audioElement.volume = newVolume;
+      console.log(`[BGM] Volume updated to ${newVolume.toFixed(4)} (config: ${this.config.volume.toFixed(4)})`);
     }
   }
 

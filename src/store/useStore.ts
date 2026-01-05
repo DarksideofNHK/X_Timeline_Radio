@@ -1546,8 +1546,9 @@ export const useStore = create<AppState>()(
 
         try {
           // 【重要】BGMを最初に開始（ユーザーがすぐに音が出ることを確認できる）
-          const bgmVolumeDecimal = (audioSettings.bgmVolume / 100) * 0.02; // 0-100% → 0-0.02
-          console.log(`[AIPlayback] Starting BGM immediately for ${showType} at volume ${audioSettings.bgmVolume}% (${bgmVolumeDecimal.toFixed(4)})`);
+          const bgmVolumePercent = audioSettings.bgmVolume ?? 5;
+          const bgmVolumeDecimal = bgmVolumePercent === 0 ? 0 : (bgmVolumePercent / 100) * 0.05;
+          console.log(`[AIPlayback] Starting BGM immediately for ${showType} at volume ${bgmVolumePercent}% (${bgmVolumeDecimal.toFixed(4)})`);
 
           // 既存のBGMを停止してから新しく開始（isPlayingフラグをリセット）
           bgmManager.stop();

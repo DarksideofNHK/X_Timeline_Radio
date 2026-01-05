@@ -22,8 +22,12 @@ export function Settings() {
     setTracks(allTracks);
   };
 
-  // BGM音量をパーセント（0-100）から実際の音量（0-0.02）に変換
-  const getBgmVolumeDecimal = (percent: number) => (percent / 100) * 0.02;
+  // BGM音量をパーセント（0-100）から実際の音量に変換
+  // 0% = 0（ミュート）、100% = 0.05（控えめな最大音量）
+  const getBgmVolumeDecimal = (percent: number) => {
+    if (percent === 0) return 0;
+    return (percent / 100) * 0.05;
+  };
 
   const handleBgmToggle = async () => {
     if (bgmEnabled) {
@@ -299,22 +303,34 @@ export function Settings() {
 
         {/* BGM音量スライダー */}
         <div className="mb-4">
-          <label className="block text-sm text-text-secondary mb-2">
-            BGM音量: {audioSettings.bgmVolume}%
-          </label>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-sm text-text-secondary">
+              BGM音量
+            </label>
+            <span className="text-sm font-bold text-accent min-w-[3rem] text-right">
+              {audioSettings.bgmVolume ?? 5}%
+            </span>
+          </div>
           <input
             type="range"
             min="0"
             max="100"
-            value={audioSettings.bgmVolume}
+            step="5"
+            value={audioSettings.bgmVolume ?? 5}
             onChange={(e) => handleBgmVolumeChange(parseInt(e.target.value))}
-            className="w-full h-2 bg-bg-menu rounded-lg appearance-none cursor-pointer accent-accent"
+            className="w-full h-3 bg-bg-menu rounded-lg appearance-none cursor-pointer accent-accent touch-pan-y"
+            style={{
+              background: `linear-gradient(to right, var(--color-accent) 0%, var(--color-accent) ${audioSettings.bgmVolume ?? 5}%, var(--color-bg-menu) ${audioSettings.bgmVolume ?? 5}%, var(--color-bg-menu) 100%)`
+            }}
           />
-          <div className="flex justify-between text-xs text-text-disabled mt-1">
-            <span>0%（オフ）</span>
+          <div className="flex justify-between text-xs text-text-disabled mt-2">
+            <span>🔇 0%</span>
             <span>50%</span>
-            <span>100%</span>
+            <span>🔊 100%</span>
           </div>
+          {(audioSettings.bgmVolume ?? 5) === 0 && (
+            <p className="text-xs text-yellow-600 mt-1">⚠️ BGMはミュートされています</p>
+          )}
         </div>
 
         {/* BGMソース選択 */}
