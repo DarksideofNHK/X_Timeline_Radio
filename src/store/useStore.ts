@@ -1524,9 +1524,9 @@ export const useStore = create<AppState>()(
           return;
         }
 
-        // プリロード開始
+        // プリロード開始 & BGM即座開始（ユーザー体験向上）
         set({ isPreloading: true });
-        console.log('[AIPlayback] Starting preload...');
+        console.log('[AIPlayback] Starting playback sequence...');
 
         // Media Sessionを更新
         mediaSessionManager.updateMetadata({
@@ -1543,6 +1543,20 @@ export const useStore = create<AppState>()(
         };
 
         try {
+          // 【重要】BGMを最初に開始（ユーザーがすぐに音が出ることを確認できる）
+          console.log(`[AIPlayback] Starting BGM immediately for ${showType}...`);
+
+          // 既存のBGMを停止してから新しく開始（isPlayingフラグをリセット）
+          bgmManager.stop();
+          bgmManager.setConfig({ showType, source: 'default', volume: 0.004 });
+
+          // BGMを非同期で開始（エラーがあってもTTS再生は続ける）
+          bgmManager.start().then(() => {
+            console.log('[AIPlayback] BGM started successfully');
+          }).catch((e) => {
+            console.error('[AIPlayback] BGM start failed:', e);
+          });
+
           const { currentSectionIndex: startSection, currentChunkIndex: startChunk } = get();
 
           // 全チャンクをフラット化してインデックス管理
@@ -1579,10 +1593,16 @@ export const useStore = create<AppState>()(
           }
           console.log(`[AIPlayback] Section boundaries: ${sectionBoundaries.join(', ')}`);
 
-          // 最初のチャンクを先にプリロード（必ず完了を待つ）
+          // 最初のチャンクをプリロード開始
           console.log('[AIPlayback] Preloading first chunk...');
           const firstChunkPromise = generateAudioUrl(allChunks[startIdx].text, ttsConfig);
           prefetchPromises.set(startIdx, firstChunkPromise);
+
+          // 残りのチャンクも並行でプリフェッチ開始（待たずに開始）
+          for (let i = startIdx + 1; i < Math.min(startIdx + PREFETCH_AHEAD + 1, allChunks.length); i++) {
+            console.log(`[AIPlayback] Background prefetch chunk ${i + 1}...`);
+            prefetchPromises.set(i, generateAudioUrl(allChunks[i].text, ttsConfig));
+          }
 
           // 最初のチャンクの読み込み完了を待つ
           const firstAudioUrl = await firstChunkPromise;
@@ -1592,24 +1612,12 @@ export const useStore = create<AppState>()(
           if (get().stopRequested) {
             console.log('[AIPlayback] Stop requested during preload');
             set({ isPreloading: false, stopRequested: false });
+            bgmManager.stop();
             return;
           }
 
-          // 残りのチャンクをプリフェッチ開始（バックグラウンド）
-          for (let i = startIdx + 1; i < Math.min(startIdx + PREFETCH_AHEAD + 1, allChunks.length); i++) {
-            console.log(`[AIPlayback] Background prefetch chunk ${i + 1}...`);
-            prefetchPromises.set(i, generateAudioUrl(allChunks[i].text, ttsConfig));
-          }
-
-          // プリロード完了 → BGMを先行再生開始
-          console.log('[AIPlayback] Preload complete, starting BGM first...');
-
-          // BGMを先に開始（番組タイプ別）
-          bgmManager.setConfig({ showType: audioSettings.showType, source: 'default' });
-          console.log(`[AIPlayback] Starting BGM for ${audioSettings.showType}...`);
-          await bgmManager.start();
-
-          // BGM開始後に再生状態を更新
+          // プリロード完了 → TTS再生開始
+          console.log('[AIPlayback] Preload complete, starting TTS playback...');
           set({ isPreloading: false, isPlaying: true });
           mediaSessionManager.setPlaybackState('playing');
 

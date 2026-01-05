@@ -46,7 +46,7 @@ class BgmManager {
   private isMobile: boolean;
   private config: BgmConfig = {
     source: 'default', // デフォルトBGMをデフォルトに
-    volume: 0.034, // -13dB調整後（旧: 0.15 → 0.06 → 0.034）
+    volume: 0.004, // -18dB追加調整後（旧: 0.034 → 0.004）パーソナリティの声を優先
     showType: 'x-timeline-radio', // デフォルトはX Timeline Radio
   };
 
