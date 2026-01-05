@@ -121,8 +121,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       throw new Error('Failed to parse Gemini response as JSON');
     }
 
+    // オープニングと最初のコーナーを結合（オープニングが短いため一括生成）
+    let processedSections = parsed.sections;
+    if (processedSections.length >= 2 && processedSections[0].type === 'opening') {
+      const opening = processedSections[0];
+      const firstCorner = processedSections[1];
+
+      // オープニングのスクリプトを最初のコーナーの先頭に結合
+      const mergedScript = `${opening.script || ''}\n\n${firstCorner.script || ''}`;
+      const mergedDuration = (opening.estimatedDuration || 60) + (firstCorner.estimatedDuration || 180);
+
+      // 結合したセクションを作成（オープニングは削除）
+      processedSections = [
+        {
+          ...firstCorner,
+          script: mergedScript,
+          estimatedDuration: mergedDuration,
+          title: `${opening.title || 'オープニング'} → ${firstCorner.title || ''}`,
+        },
+        ...processedSections.slice(2),
+      ];
+
+      console.log('[FullScript] Merged opening with first corner for seamless audio');
+    }
+
     // セクションをチャンク分割
-    const sections = parsed.sections.map((section: any, index: number) => {
+    const sections = processedSections.map((section: any, index: number) => {
       const script = section.script || '';
       const chunks = splitIntoChunks(script);
 
