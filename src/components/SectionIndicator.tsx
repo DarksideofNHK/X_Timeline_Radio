@@ -127,14 +127,14 @@ function getSectionIcon(type: string, genre?: string, showType?: string): string
     'tv-stations': '📡',
   };
 
-  // 災害ニュース用
+  // 災害ニュース用（速報性重視の新構成）
   const disasterIcons: Record<string, string> = {
-    'earthquake': '🌊',
-    'weather': '🌧️',
-    'landslide': '⛰️',
-    'typhoon': '🌀',
-    'damage': '📢',
-    'safety': '🏠',
+    'damage': '🔥',
+    'breaking': '🚨',
+    'local-voices': '📢',
+    'warnings': '⚠️',
+    'infrastructure': '🚃',
+    'preparedness': '🛡️',
   };
 
   // 番組タイプに応じてアイコンマップを選択
@@ -179,14 +179,14 @@ function getGenreShortName(genre?: string, showType?: string): string {
     'tv-stations': '民放',
   };
 
-  // 災害ニュース用
+  // 災害ニュース用（速報性重視の新構成）
   const disasterNames: Record<string, string> = {
-    'earthquake': '地震',
-    'weather': '気象',
-    'landslide': '土砂',
-    'typhoon': '台風',
     'damage': '被害',
-    'safety': '安全',
+    'breaking': '速報',
+    'local-voices': '現地',
+    'warnings': '警報',
+    'infrastructure': '交通',
+    'preparedness': '防災',
   };
 
   // 番組タイプに応じて名前マップを選択
