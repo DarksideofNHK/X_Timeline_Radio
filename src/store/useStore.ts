@@ -1547,20 +1547,17 @@ export const useStore = create<AppState>()(
             prefetchPromises.set(i, generateAudioUrl(allChunks[i].text, ttsConfig));
           }
 
-          // プリロード完了 → 再生開始
+          // プリロード完了 → BGMを先行再生開始
+          console.log('[AIPlayback] Preload complete, starting BGM first...');
+
+          // BGMを先に開始（番組タイプ別）
+          bgmManager.setConfig({ showType: audioSettings.showType, source: 'default' });
+          console.log(`[AIPlayback] Starting BGM for ${audioSettings.showType}...`);
+          await bgmManager.start();
+
+          // BGM開始後に再生状態を更新
           set({ isPreloading: false, isPlaying: true });
           mediaSessionManager.setPlaybackState('playing');
-
-          // BGMが設定されていれば再生開始（番組タイプ別）
-          if (!bgmManager.getIsPlaying()) {
-            const bgmConfig = bgmManager.getConfig();
-            if (bgmConfig.source !== 'none') {
-              // 番組タイプに応じたBGMを設定
-              bgmManager.setConfig({ showType: audioSettings.showType });
-              console.log(`[AIPlayback] Starting BGM for ${audioSettings.showType}...`);
-              await bgmManager.start();
-            }
-          }
 
           // AIプログラムのステータスを更新
           set((state) => ({
