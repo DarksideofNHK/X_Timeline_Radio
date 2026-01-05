@@ -14,15 +14,29 @@ function isMobileBrowser(): boolean {
 // モバイル用音量補正 (-14dB ≈ 0.2倍)
 const MOBILE_VOLUME_MULTIPLIER = 0.2;
 
-// デフォルトBGM設定
-const DEFAULT_BGM = {
-  name: 'Digital Newsfeed Groove',
-  path: '/bgm/Digital_Newsfeed_Groove_2026-01-03T112506.mp3',
+// 番組タイプ別BGM設定
+const SHOW_TYPE_BGMS: Record<string, { name: string; path: string }> = {
+  'x-timeline-radio': {
+    name: 'Digital Newsfeed Groove',
+    path: '/bgm/Digital_Newsfeed_Groove_2026-01-03T112506.mp3',
+  },
+  'politician-watch': {
+    name: 'Cybernetic Dominion',
+    path: '/bgm/Cybernetic_Dominion_2026-01-04T093727.mp3',
+  },
+  'old-media-buster': {
+    name: 'Decline of the Old Guard',
+    path: '/bgm/Decline_of_the_Old_Guard_2026-01-04T074159.mp3',
+  },
 };
+
+// デフォルトBGM設定（フォールバック）
+const DEFAULT_BGM = SHOW_TYPE_BGMS['x-timeline-radio'];
 
 interface BgmConfig {
   source: BgmSource;
   volume: number; // 0-1
+  showType: string; // 番組タイプ
 }
 
 class BgmManager {
@@ -33,6 +47,7 @@ class BgmManager {
   private config: BgmConfig = {
     source: 'default', // デフォルトBGMをデフォルトに
     volume: 0.15,
+    showType: 'x-timeline-radio', // デフォルトはX Timeline Radio
   };
 
   constructor() {
@@ -66,16 +81,19 @@ class BgmManager {
     let trackName: string;
 
     if (this.config.source === 'default') {
-      // デフォルトBGMを使用
-      audioSrc = DEFAULT_BGM.path;
-      trackName = DEFAULT_BGM.name;
+      // 番組タイプ別のBGMを使用
+      const showBgm = SHOW_TYPE_BGMS[this.config.showType] || DEFAULT_BGM;
+      audioSrc = showBgm.path;
+      trackName = showBgm.name;
+      console.log(`[BGM] Using BGM for ${this.config.showType}: ${trackName}`);
     } else {
       // ユーザーアップロードBGMを使用
       const track = await bgmStorage.getRandomTrack();
       if (!track) {
-        console.log('[BGM] No uploaded tracks available, falling back to default');
-        audioSrc = DEFAULT_BGM.path;
-        trackName = DEFAULT_BGM.name;
+        console.log('[BGM] No uploaded tracks available, falling back to show-specific BGM');
+        const showBgm = SHOW_TYPE_BGMS[this.config.showType] || DEFAULT_BGM;
+        audioSrc = showBgm.path;
+        trackName = showBgm.name;
       } else {
         // 前のObjectURLを解放
         if (this.currentObjectUrl) {

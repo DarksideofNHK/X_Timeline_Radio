@@ -42,6 +42,15 @@ export const SHOW_TYPES: ShowTypeConfig[] = [
     color: 'orange',
     isTest: true, // テスト版
   },
+  {
+    id: 'disaster-news',
+    name: 'X災害ニュース',
+    description: '全国の地震・気象・土砂災害をリアルタイムでお届け',
+    icon: '🚨',
+    allowDownload: true, // 防災情報として共有可能
+    color: 'red',
+    isTest: true, // テスト版
+  },
 ];
 
 // IDから番組タイプを取得

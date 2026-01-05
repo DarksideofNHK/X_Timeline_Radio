@@ -169,6 +169,7 @@ async function throttleRequest(): Promise<void> {
 interface TtsConfig {
   openaiApiKey: string;
   openaiVoiceId: OpenAIVoiceId;
+  showType?: string; // 番組タイプ（TTS Instruction切り替え用）
 }
 
 // 音声を生成（再生せずにURLを返す）- キャッシュ対応・リトライ対応（OpenAIのみ）
@@ -176,7 +177,7 @@ async function generateAudioUrl(
   script: string,
   ttsConfig: TtsConfig
 ): Promise<string> {
-  const { openaiApiKey, openaiVoiceId } = ttsConfig;
+  const { openaiApiKey, openaiVoiceId, showType = 'x-timeline-radio' } = ttsConfig;
 
   // TTSに渡す前にテキストを整形（不要なスペースを除去）
   const cleanedScript = cleanTextForTTS(script);
@@ -201,7 +202,7 @@ async function generateAudioUrl(
       const response = await fetch('/api/generate-audio-openai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ script: cleanedScript, apiKey: openaiApiKey, voice: openaiVoiceId }),
+        body: JSON.stringify({ script: cleanedScript, apiKey: openaiApiKey, voice: openaiVoiceId, showType }),
       });
 
       if (response.ok) {
@@ -815,12 +816,13 @@ export const useStore = create<AppState>()(
         });
 
         try {
-          const { openaiVoiceId, speed } = audioSettings;
+          const { openaiVoiceId, speed, showType } = audioSettings;
 
-          // TTS設定を作成
+          // TTS設定を作成（番組タイプも含める）
           const ttsConfig: TtsConfig = {
             openaiApiKey: apiConfig.openaiApiKey,
             openaiVoiceId,
+            showType,
           };
 
           // 最初から開始する場合: イントロ + 最初の投稿を並行生成
@@ -996,12 +998,13 @@ export const useStore = create<AppState>()(
         });
 
         try {
-          const { openaiVoiceId, speed } = audioSettings;
+          const { openaiVoiceId, speed, showType } = audioSettings;
 
-          // TTS設定を作成
+          // TTS設定を作成（番組タイプも含める）
           const ttsConfig: TtsConfig = {
             openaiApiKey: apiConfig.openaiApiKey,
             openaiVoiceId,
+            showType,
           };
 
           console.log(`[Playback] Playing prefetched segment ${segmentIndex} (${segment.name})...`);
@@ -1475,11 +1478,13 @@ export const useStore = create<AppState>()(
         });
         mediaSessionManager.setPlaybackState('playing');
 
-        // BGMが設定されていれば再生開始
+        // BGMが設定されていれば再生開始（番組タイプ別）
         if (!bgmManager.getIsPlaying()) {
           const bgmConfig = bgmManager.getConfig();
           if (bgmConfig.source !== 'none') {
-            console.log('[AIPlayback] Starting BGM...');
+            // 番組タイプに応じたBGMを設定
+            bgmManager.setConfig({ showType: audioSettings.showType });
+            console.log(`[AIPlayback] Starting BGM for ${audioSettings.showType}...`);
             await bgmManager.start();
           }
         }
@@ -1489,10 +1494,11 @@ export const useStore = create<AppState>()(
           aiProgram: state.aiProgram ? { ...state.aiProgram, status: 'playing' } : null,
         }));
 
-        const { openaiVoiceId, speed } = audioSettings;
+        const { openaiVoiceId, speed, showType } = audioSettings;
         const ttsConfig: TtsConfig = {
           openaiApiKey: apiConfig.openaiApiKey,
           openaiVoiceId,
+          showType,
         };
 
         try {

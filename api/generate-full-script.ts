@@ -23,6 +23,12 @@ const INLINE_SHOW_CONFIGS: Record<string, { name: string; voice: string; bgm: st
     bgm: 'Digital_Newsfeed_Groove',
     allowDownload: false,
   },
+  'disaster-news': {
+    name: 'X災害ニュース',
+    voice: 'shimmer',  // 落ち着いた声で災害情報を伝える
+    bgm: 'Digital_Newsfeed_Groove_2026-01-03T112506',
+    allowDownload: true,  // 防災情報として共有可能
+  },
 };
 
 // X Timeline Radio用ジャンル情報
@@ -72,6 +78,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       prompt = generatePoliticianWatchPrompt(allPosts, month, day, weekday, todayString);
     } else if (showType === 'old-media-buster') {
       prompt = generateOldMediaBusterPrompt(allPosts, month, day, weekday, todayString);
+    } else if (showType === 'disaster-news') {
+      prompt = generateDisasterNewsPrompt(allPosts, month, day, weekday, todayString);
     } else {
       // X Timeline Radio
       prompt = generateXTimelineRadioPrompt(allPosts, month, day, weekday, todayString);
@@ -426,24 +434,40 @@ scriptには「そのまま声に出して読める文章」のみを書いて�
 - ❌ カッコ書きの補足説明
 - ✅ 実況者が話す言葉のみ
 
-【重要：TTSの読み方】
-**基本方針：一般的な漢字はそのまま使う。難読漢字のみひらがな。**
+【重要：平易な言葉への置き換え】
+内容は大人向けのまま、難しい熟語や四字熟語は**平易な言葉に置き換える**こと：
+- 難読熟語は避け、一般的な表現に言い換える
+- 四字熟語より、分かりやすい日本語表現を優先
+- ラジオで聞いて一発で意味が伝わる言葉を選ぶ
 
-**漢字のまま使う語（これらはひらがなにしない）：**
+【重要：TTSの読み方 - 人名・固有名詞は全てひらがな】
+
+**★最重要★ 人名は全てひらがなで書く：**
+- 高市早苗→たかいちさなえ
+- 岸田文雄→きしだふみお
+- 石破茂→いしばしげる
+- 茂木敏充→もてぎとしみつ
+- 野田佳彦→のだよしひこ
+- 玉木雄一郎→たまきゆういちろう
+- 馬場伸幸→ばばのぶゆき
+- 松井一郎→まついいちろう
+- その他の政治家名も全てひらがなで
+
+**★固有名詞もひらがなで：**
+- 箱根駅伝→はこねえきでん
+- 青山学院大学→あおやまがくいんだいがく
+- ベネズエラ→そのまま（カタカナ語はOK）
+
+**漢字のまま使う語：**
 - 政党名：自民党、公明党、立憲民主党、維新の会、国民民主党、共産党
-- 政治用語：与党、野党、政権、政策、国会、選挙、法案、予算、閣僚、大臣
-- 一般的な漢字：新年、政界、熱い、激しい、戦い、反撃、批判、主張、意見
+- 政治用語：与党、野党、政権、政策、国会、選挙、法案、予算、閣僚、大臣、内閣総理大臣
+- 一般的な漢字：新年、政界、熱い、激しい、戦い、反撃、批判、主張、意見、発表、優勝
 
-**ひらがなにする語（難読・誤読しやすい）：**
+**ひらがなにする語（難読漢字）：**
 - 舌戦→ぜっせん、論戦→ろんせん
 - 反駁→はんばく、糾弾→きゅうだん、弾劾→だんがい
 - 詭弁→きべん、忖度→そんたく
-- その他、中学生が読めない漢字のみ
-
-**政治家名の読み方：**
-- 漢字＋ふりがなの重複禁止（どちらか一方）
-- 読み間違いが起きやすい名前のみひらがな（例：麻生太郎→あそうたろう）
-- 一般的な名前は漢字でOK（例：岸田文雄はそのまま）
+- 邦人→ほうじん、覚悟→かくご、盤石→ばんじゃく
 
 **英語はカタカナで：**
 - X→エックス、SNS→エスエヌエス
@@ -495,11 +519,11 @@ ${publicPosts || '（該当なし）'}
 {
   "sections": [
     { "id": "opening", "type": "opening", "title": "オープニング", "script": "読み上げテキスト", "estimatedDuration": 90 },
-    { "id": "ruling-party", "type": "segment", "title": "与党陣営", "script": "読み上げテキスト", "estimatedDuration": 180 },
-    { "id": "opposition", "type": "segment", "title": "野党陣営", "script": "読み上げテキスト", "estimatedDuration": 180 },
-    { "id": "clash", "type": "segment", "title": "対立ポイント", "script": "読み上げテキスト", "estimatedDuration": 150 },
-    { "id": "public-voice", "type": "segment", "title": "国民の声", "script": "読み上げテキスト", "estimatedDuration": 120 },
-    { "id": "ending", "type": "ending", "title": "エンディング", "script": "読み上げテキスト", "estimatedDuration": 60 }
+    { "id": "ruling-party", "type": "corner", "genre": "ruling-ldp", "title": "与党陣営", "script": "読み上げテキスト", "estimatedDuration": 180 },
+    { "id": "opposition", "type": "corner", "genre": "opposition-cdp", "title": "野党陣営", "script": "読み上げテキスト", "estimatedDuration": 180 },
+    { "id": "clash", "type": "corner", "genre": "opposition-ishin", "title": "対立ポイント", "script": "読み上げテキスト", "estimatedDuration": 150 },
+    { "id": "public-voice", "type": "corner", "genre": "public-reaction", "title": "国民の声", "script": "読み上げテキスト", "estimatedDuration": 120 },
+    { "id": "ending", "type": "closing", "title": "エンディング", "script": "読み上げテキスト", "estimatedDuration": 60 }
   ]
 }
 \`\`\`
@@ -524,7 +548,10 @@ function generateOldMediaBusterPrompt(allPosts: any, month: number, day: number,
     if (!info) continue;
 
     const postsText = posts.map((p: any, i: number) => {
-      return `${i + 1}. ${p.author?.name || 'ユーザー'}\n   「${p.text?.replace(/\n/g, ' ').slice(0, 200)}」`;
+      const targetMedia = p.target_media ? `【批判対象: ${p.target_media}】` : '';
+      const mediaAction = p.media_action ? `【メディアの行動: ${p.media_action}】` : '';
+      const criticismPoint = p.criticism_point ? `【批判ポイント: ${p.criticism_point}】` : '';
+      return `${i + 1}. @${p.author?.username || 'user'}（${p.author?.name || 'ユーザー'}）${targetMedia}${mediaAction}${criticismPoint}\n   「${p.text?.replace(/\n/g, ' ').slice(0, 400)}」`;
     }).join('\n\n');
 
     allPostsText += `\n### ${info.icon} ${info.name}（${posts.length}件）\n${postsText}\n`;
@@ -533,69 +560,252 @@ function generateOldMediaBusterPrompt(allPosts: any, month: number, day: number,
   return `あなたは「オールドメディアをぶっ壊せラジオ」の台本作家です。皮肉を込めたコメンテーター風の番組を作ります。
 
 【番組コンセプト】
-NHK、新聞、民放テレビなどのオールドメディアに対する批判的な投稿を紹介し、皮肉を込めてコメントする番組。
-過激すぎず、でも鋭い視点で問題点を指摘する。
+NHK、新聞、民放テレビなどのオールドメディアに対する批判的な投稿を**具体的に引用**し、皮肉を込めてコメントする。
+実際のXユーザーの声を紹介しながら、オールドメディアの問題点を浮き彫りにする番組。
+
+【★最重要★ 投稿の具体的な引用】
+各コーナーでは、収集した投稿を**必ず具体的に引用**してください：
+- 「○○さんはこう投稿しています。『（投稿内容の引用）』」
+- 「これに対して△△さんは『（投稿内容）』と指摘しています」
+- 各コーナーで最低3-5件の投稿を引用すること
+- ユーザー名（ひらがな読み）と投稿内容をセットで紹介
+- 引用後に皮肉を込めたコメントを添える
 
 【パーソナリティキャラクター】
 - 皮肉を込めたコメンテーター
 - 低めの落ち着いた声
-- 「またですか」「驚きですね」のような皮肉
+- 「またですか」「驚きですね」「さすがですね」のような皮肉
 - 淡々と、しかし鋭く
 - 過激な表現は避けつつ、問題点は明確に指摘
+- 投稿を紹介した後に「なるほど」「確かに」などの相槌
 
 【重要：読み上げ専用テキスト】
 scriptには「そのまま声に出して読める文章」のみを書いてください。
 - ❌ 演出指示やカッコ書き
 - ✅ パーソナリティが話す言葉のみ
 
-【重要：TTSの読み方】
-- メディア名ははっきりと
-- 難読漢字はひらがなで
+【重要：平易な言葉への置き換え】
+内容は大人向けのまま、難しい熟語や四字熟語は**平易な言葉に置き換える**こと：
+- 難読熟語は避け、一般的な表現に言い換える
+- 例：「厚顔無恥」→「恥知らず」「図々しい」
+- 例：「媚中反日」→「中国寄りで日本に批判的」
+- 例：「大盤振る舞い」→「気前よくばらまく」
+- 四字熟語より、分かりやすい日本語表現を優先
+- ラジオで聞いて一発で意味が伝わる言葉を選ぶ
+
+【重要：TTSの読み方 - スクリプト内でひらがなに変換すること】
+- メディア名ははっきりと（NHK→エヌエイチケー、TBS→ティービーエス）
+- ユーザー名は読みやすい形で（英数字混じりはカタカナ読み）
+- 以下の漢字は**スクリプト内でひらがなに変換して出力**すること：
+  - 「血税」→「けつぜい」
+  - 「捏造」→「ねつぞう」
+  - 「忖度」→「そんたく」
+  - 「揶揄」→「やゆ」
+  - 「糾弾」→「きゅうだん」
+  - 「誹謗」→「ひぼう」
+  - 「偏向」→「へんこう」
+  - 「大盤振る舞い」→「おおばんぶるまい」
+  - 「憤る/憤って」→「いきどおる/いきどおって」
+  - 「媚中反日」→「びちゅうはんにち」
+  - 「火の玉」→「ひのたま」
+  - 「厚顔無恥」→「こうがんむち」
+  - その他、読み間違えやすい熟語もひらがなで
 - 英語はカタカナで
 
 【番組概要】
 - 番組名: オールドメディアをぶっ壊せラジオ
 - 今日の日付: ${todayString}
 
-【収集した投稿】
+【収集した投稿 - これを具体的に引用すること！】
 ${allPostsText || '（該当なし）'}
 
-【番組構成】
+【番組構成 - 各コーナー3-5件の投稿を具体的に引用すること】
 
 1. **オープニング**（60秒）
    - 「オールドメディアをぶっ壊せラジオ、${month}月${day}日${weekday}曜日です」
-   - 「今日もオールドメディアの問題点をチェックしていきましょう」
+   - 「今日もXに寄せられたオールドメディアへの声を紹介していきます」
+   - 今日のハイライト（特に問題のあったメディアの行動を予告）
 
-2. **NHK批判コーナー**（3-4分）
-   - NHKに関する批判的な投稿を紹介
-   - 皮肉を込めたコメント
+2. **NHK批判コーナー**（4-5分）
+   - 「まずはエヌエイチケーへの声から」
+   - 以下のパターンで3-5件紹介：
+     1. 「○○さんがこう投稿しています」
+     2. 「エヌエイチケーが△△について□□した」（メディアの具体的行動）
+     3. 「それに対して『（投稿内容の引用）』と批判しています」
+     4. パーソナリティのコメント（「受信料を払ってこれですか」など）
+   - 各投稿について、何が問題だったかを明確に
 
-3. **新聞批判コーナー**（3-4分）
-   - 朝日、毎日、読売、産経などへの批判
-   - 偏向報道、誤報などを指摘
+3. **新聞批判コーナー**（4-5分）
+   - 「続いて新聞各社への声です」
+   - 同様に3-5件、「どの新聞が」「何をしたか」「それへの批判」をセットで
+   - 「これぞ新聞クオリティ」のような皮肉
 
-4. **民放批判コーナー**（3-4分）
-   - フジ、日テレ、TBS、テレ朝への批判
-   - やらせ、偏向などを指摘
+4. **民放批判コーナー**（4-5分）
+   - 「さて、民放テレビへの声も見ていきましょう」
+   - 同様に3-5件、「どの番組で」「何をしたか」「それへの批判」をセットで
+   - 「スポンサーの顔色うかがいですかね」のような皮肉
 
 5. **エンディング**（60秒）
-   - 今日のまとめ
+   - 「今日紹介したのはほんの一部です」
    - 「メディアリテラシー、大事ですね」
-   - 「オールドメディアをぶっ壊せラジオ、また次回」
+   - 「オールドメディアをぶっ壊せラジオ、また次回お会いしましょう」
 
 【出力形式】
 \`\`\`json
 {
   "sections": [
     { "id": "opening", "type": "opening", "title": "オープニング", "script": "読み上げテキスト", "estimatedDuration": 60 },
-    { "id": "nhk", "type": "segment", "title": "NHK批判", "script": "読み上げテキスト", "estimatedDuration": 180 },
-    { "id": "newspapers", "type": "segment", "title": "新聞批判", "script": "読み上げテキスト", "estimatedDuration": 180 },
-    { "id": "tv-stations", "type": "segment", "title": "民放批判", "script": "読み上げテキスト", "estimatedDuration": 180 },
-    { "id": "ending", "type": "ending", "title": "エンディング", "script": "読み上げテキスト", "estimatedDuration": 60 }
+    { "id": "nhk", "type": "corner", "genre": "nhk", "title": "NHK批判", "script": "読み上げテキスト", "estimatedDuration": 180 },
+    { "id": "newspapers", "type": "corner", "genre": "newspapers", "title": "新聞批判", "script": "読み上げテキスト", "estimatedDuration": 180 },
+    { "id": "tv-stations", "type": "corner", "genre": "tv-stations", "title": "民放批判", "script": "読み上げテキスト", "estimatedDuration": 180 },
+    { "id": "ending", "type": "closing", "title": "エンディング", "script": "読み上げテキスト", "estimatedDuration": 60 }
   ]
 }
 \`\`\`
 
+台本をJSON形式で出力してください。`;
+}
+
+// ========================================
+// X災害ニュース用プロンプト
+// ========================================
+function generateDisasterNewsPrompt(allPosts: any, month: number, day: number, weekday: string, todayString: string): string {
+  const genreInfo: Record<string, { name: string; icon: string }> = {
+    'earthquake': { name: '地震・津波', icon: '🌊' },
+    'weather': { name: '気象警報', icon: '🌧️' },
+    'landslide': { name: '土砂・洪水', icon: '⛰️' },
+    'typhoon': { name: '台風・暴風', icon: '🌀' },
+    'damage': { name: '被害状況', icon: '📢' },
+    'safety': { name: '避難・安全', icon: '🏠' },
+  };
+
+  let allPostsText = '';
+  let hasAnyPosts = false;
+
+  for (const [genreId, posts] of Object.entries(allPosts)) {
+    if (!Array.isArray(posts) || posts.length === 0) continue;
+    const info = genreInfo[genreId];
+    if (!info) continue;
+
+    hasAnyPosts = true;
+    const postsText = posts.map((p: any, i: number) => {
+      const location = p.location ? `【場所: ${p.location}】` : '';
+      const disasterType = p.disasterType ? `【災害: ${p.disasterType}】` : '';
+      const severity = p.severity ? `【深刻度: ${p.severity}】` : '';
+      const sourceType = p.sourceType ? `【情報源: ${p.sourceType}】` : '';
+      return `${i + 1}. @${p.author?.username || 'user'}（${p.author?.name || 'ユーザー'}）${location}${disasterType}${severity}${sourceType}\n   「${p.text?.replace(/\n/g, ' ').slice(0, 400)}」`;
+    }).join('\n\n');
+
+    allPostsText += `\n### ${info.icon} ${info.name}（${posts.length}件）\n${postsText}\n`;
+  }
+
+  return `あなたは「X災害ニュース」の台本作家です。全国の災害情報を冷静かつ的確に伝える防災ラジオ番組を作ります。
+
+【番組コンセプト】
+Xに投稿されたリアルタイムの災害情報を収集し、全国津々浦々の災害状況を伝える。
+気象庁発表だけでは拾えない、現地からの生の声も含めて防災に役立つ情報を届ける。
+冷静沈着に、しかし緊迫感を持って情報を伝える。
+
+【パーソナリティキャラクター】
+- 落ち着いた声で冷静に情報を伝える
+- 「現在の状況をお伝えします」「ご注意ください」のような表現
+- 不安を煽りすぎず、しかし危険性は明確に伝える
+- 場所と状況を具体的に伝える
+- 公式情報と現地情報を区別して伝える
+
+【重要：読み上げ専用テキスト】
+scriptには「そのまま声に出して読める文章」のみを書いてください。
+- ❌ 演出指示やカッコ書き
+- ✅ パーソナリティが話す言葉のみ
+
+【重要：地名の読み方】
+- 都道府県名、市区町村名は正確に読めるようにひらがなも併記
+- 例：「石川県輪島市」→「いしかわけん わじまし」
+- 例：「宮崎県日南市」→「みやざきけん にちなんし」
+- 難読地名は必ずひらがなを添える
+
+【重要：数値と単位】
+- 震度は「震度○」とはっきり読む
+- 雨量は「○ミリ」「○ミリメートル」
+- 風速は「秒速○メートル」
+- 時間は「○時○分現在」
+
+【番組概要】
+- 番組名: X災害ニュース
+- 今日の日付: ${todayString}
+
+【収集した投稿】
+${allPostsText || '（本日は大きな災害情報はありません）'}
+
+【番組構成】
+
+1. **オープニング**（30-45秒）
+   - 「X災害ニュース、${month}月${day}日${weekday}曜日版です」
+   - 「Xに投稿された全国の災害情報をお伝えします」
+   - 今日の概況（大きな災害があれば簡潔に）
+${hasAnyPosts ? `
+2. **地震・津波コーナー**（2-3分）
+   - 地震速報、津波警報・注意報の情報
+   - 現地からの揺れの報告
+   - 「○○地方では注意が必要です」
+
+3. **気象警報コーナー**（2-3分）
+   - 大雨、暴風、大雪などの警報情報
+   - 線状降水帯の発生情報
+   - 「外出を控えてください」などの注意喚起
+
+4. **土砂・洪水コーナー**（2-3分）
+   - 土砂災害警戒情報
+   - 河川の氾濫・決壊情報
+   - 避難が必要なエリアの案内
+
+5. **台風・暴風コーナー**（2-3分）
+   - 台風の進路情報
+   - 竜巻・突風の発生報告
+   - 停電情報
+
+6. **被害状況コーナー**（2-3分）
+   - 現地からの被害報告
+   - インフラ被害（停電、断水、通行止め）
+   - 交通機関の運休情報
+
+7. **避難・安全コーナー**（2-3分）
+   - 避難所開設情報
+   - 救助活動の状況
+   - 復旧の見通し
+
+8. **エンディング**（30-45秒）
+   - 「以上、本日の災害情報をお伝えしました」
+   - 「最新情報は気象庁やお住まいの自治体でご確認ください」
+   - 「どうか安全にお過ごしください」
+` : `
+2. **本日の状況**（1-2分）
+   - 「本日は大きな災害の報告はありませんでした」
+   - 「引き続き、気象情報にご注意ください」
+   - 日頃からの防災意識の呼びかけ
+
+3. **エンディング**（30秒）
+   - 「X災害ニュースでした」
+   - 「いざという時に備えて、避難場所の確認を」
+`}
+
+【出力形式】
+\`\`\`json
+{
+  "sections": [
+    { "id": "opening", "type": "opening", "title": "オープニング", "script": "読み上げテキスト", "estimatedDuration": 45 },
+    { "id": "earthquake", "type": "corner", "genre": "earthquake", "title": "地震・津波速報", "script": "読み上げテキスト", "estimatedDuration": 150 },
+    { "id": "weather", "type": "corner", "genre": "weather", "title": "気象警報", "script": "読み上げテキスト", "estimatedDuration": 150 },
+    { "id": "landslide", "type": "corner", "genre": "landslide", "title": "土砂・洪水情報", "script": "読み上げテキスト", "estimatedDuration": 150 },
+    { "id": "typhoon", "type": "corner", "genre": "typhoon", "title": "台風・暴風情報", "script": "読み上げテキスト", "estimatedDuration": 150 },
+    { "id": "damage", "type": "corner", "genre": "damage", "title": "被害状況", "script": "読み上げテキスト", "estimatedDuration": 150 },
+    { "id": "safety", "type": "corner", "genre": "safety", "title": "避難・安全情報", "script": "読み上げテキスト", "estimatedDuration": 150 },
+    { "id": "ending", "type": "closing", "title": "エンディング", "script": "読み上げテキスト", "estimatedDuration": 45 }
+  ]
+}
+\`\`\`
+
+${hasAnyPosts ? '投稿がないジャンルは省略してもOK。' : '本日は災害がないため、短い番組構成で。'}
 台本をJSON形式で出力してください。`;
 }
 
@@ -623,6 +833,7 @@ function splitIntoChunks(text: string, maxLength: number = 2000): string[] {
         chunks.push(currentChunk.trim());
         currentChunk = '';
       }
+      // 文の切れ目（。！？）で分割、読点（、）も候補に
       const sentences = paragraph.split(/(?<=[。！？])/);
       for (const sentence of sentences) {
         if (currentChunk.length + sentence.length > maxLength) {
@@ -644,7 +855,12 @@ function splitIntoChunks(text: string, maxLength: number = 2000): string[] {
     chunks.push(currentChunk.trim());
   }
 
-  return chunks;
+  // 2番目以降のチャンクの先頭に全角スペースを追加（TTSの頭切れ防止）
+  return chunks.map((chunk, index) => {
+    if (index === 0) return chunk;
+    // 先頭に全角スペースを追加してTTSに小休止を与える
+    return '　' + chunk;
+  });
 }
 
 function extractJSON(text: string): any {

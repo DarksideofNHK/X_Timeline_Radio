@@ -62,9 +62,20 @@ const INLINE_SHOW_TYPES: Record<string, { name: string; genres: Array<{ id: stri
   'old-media-buster': {
     name: 'オールドメディアをぶっ壊せラジオ',
     genres: [
-      { id: 'nhk', name: 'NHK批判', icon: '📺', query: '(NHK OR 日本放送協会) (偏向 OR 捏造 OR 問題 OR 批判 OR おかしい OR 受信料)' },
-      { id: 'newspapers', name: '新聞批判', icon: '📰', query: '(朝日新聞 OR 毎日新聞 OR 読売新聞 OR 産経新聞 OR 東京新聞) (偏向 OR 捏造 OR 問題 OR 批判)' },
-      { id: 'tv-stations', name: '民放批判', icon: '📡', query: '(フジテレビ OR 日テレ OR TBS OR テレ朝 OR テレビ東京) (偏向 OR やらせ OR 問題 OR 批判)' },
+      { id: 'nhk', name: 'NHK批判', icon: '📺', query: '(NHK OR エヌエイチケー OR 日本放送協会) (偏向報道 OR 捏造 OR 印象操作 OR 切り取り OR 受信料 OR おかしい OR ひどい OR 嘘 OR フェイク) -from:nhk_news' },
+      { id: 'newspapers', name: '新聞批判', icon: '📰', query: '(朝日新聞 OR 毎日新聞 OR 読売新聞 OR 産経新聞 OR 東京新聞 OR 新聞) (偏向 OR 捏造 OR 誤報 OR フェイク OR 印象操作 OR プロパガンダ OR 嘘 OR ひどい) -from:asahi -from:mainichi -from:ylogin' },
+      { id: 'tv-stations', name: '民放批判', icon: '📡', query: '(フジテレビ OR 日テレ OR TBS OR テレ朝 OR テレビ朝日 OR 民放 OR マスゴミ OR マスコミ) (偏向 OR やらせ OR 捏造 OR 印象操作 OR 切り取り OR ひどい OR おかしい) -from:fujitv -from:ntv -from:tbs' },
+    ],
+  },
+  'disaster-news': {
+    name: 'X災害ニュース',
+    genres: [
+      { id: 'earthquake', name: '地震・津波', icon: '🌊', query: '(地震 OR 津波 OR 震度 OR 緊急地震速報 OR 揺れ OR 余震) (発生 OR 速報 OR 注意 OR 警報 OR 避難)' },
+      { id: 'weather', name: '気象警報', icon: '🌧️', query: '(豪雨 OR 大雨 OR 暴風 OR 大雪 OR 警報 OR 特別警報 OR 線状降水帯 OR 記録的短時間大雨) (被害 OR 注意 OR 避難 OR 冠水 OR 浸水)' },
+      { id: 'landslide', name: '土砂・洪水', icon: '⛰️', query: '(土砂崩れ OR 土砂災害 OR 崖崩れ OR 洪水 OR 氾濫 OR 決壊 OR 河川 OR 堤防) (警戒 OR 被害 OR 避難 OR 発生)' },
+      { id: 'typhoon', name: '台風・暴風', icon: '🌀', query: '(台風 OR 竜巻 OR 突風 OR 暴風 OR 強風 OR 停電) (接近 OR 上陸 OR 被害 OR 注意 OR 警戒)' },
+      { id: 'damage', name: '被害状況', icon: '📢', query: '(被害 OR 停電 OR 断水 OR 孤立 OR 通行止め OR 運休 OR 欠航) (現地 OR 状況 OR 復旧 OR 確認)' },
+      { id: 'safety', name: '避難・安全', icon: '🏠', query: '(避難所 OR 避難勧告 OR 避難指示 OR 安否確認 OR 救助 OR 自衛隊 OR 消防 OR 復旧) (開設 OR 情報 OR 活動 OR 支援)' },
     ],
   },
 };
@@ -107,6 +118,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (showType === 'politician-watch') {
         const collectPromises = show.genres.map(async (genreConfig) => {
           const { posts, annotations } = await collectPoliticianPostsSimple(genreConfig, apiKey);
+          return { id: genreConfig.id, posts, annotations };
+        });
+        const results = await Promise.all(collectPromises);
+        for (const result of results) {
+          allPosts[result.id] = result.posts;
+          allAnnotations.push(...result.annotations);
+        }
+      } else if (showType === 'disaster-news') {
+        // 災害ニュース用の収集を並列実行
+        const collectPromises = show.genres.map(async (genreConfig) => {
+          const { posts, annotations } = await collectDisasterPosts(genreConfig, apiKey);
           return { id: genreConfig.id, posts, annotations };
         });
         const results = await Promise.all(collectPromises);
@@ -454,6 +476,35 @@ async function collectGenericPosts(
   const fromDate = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
   const toDate = now.toISOString().split('T')[0];
 
+  // オールドメディア用の詳細な指示
+  const isOldMediaBuster = showName.includes('オールドメディア');
+
+  const oldMediaInstructions = isOldMediaBuster ? `
+【重要：オールドメディア批判投稿の収集ポイント】
+
+★最重要★ 「オールドメディアが何をしたか」の具体例付き投稿を優先：
+- 「NHKが○○について△△と報道した」という具体的なメディア行動を含む投稿
+- 「朝日新聞の○○記事で△△と書いてあった」という元記事への言及がある投稿
+- 「TBSの○○番組で△△の発言を切り取っていた」という番組内容への言及がある投稿
+
+★オールドメディア側の報道内容・問題行動を特定できる投稿：
+- どのメディアが
+- 何のニュース/番組で
+- どんな報道・対応をしたか
+が分かる投稿を探す
+
+【求める投稿の例】
+- 「NHKニュース7で○○事件を完全スルー。代わりに△△を長々と放送。これが公共放送？」
+- 「朝日新聞の○月○日の記事『△△』、事実と全く違う。ソースは□□」
+- 「TBSの○○で政治家の発言を切り取り。実際は△△と言っていたのに」
+- 「読売が○○について報道するも、××という重要な事実を隠蔽」
+
+【投稿データに含めるべき情報】
+- media_action: オールドメディアが何をしたか（報道内容、問題行動）
+- target_media: どのメディアか
+- criticism_point: 何が問題か（偏向、捏造、スルー、切り取りなど）
+` : '';
+
   const prompt = `
 あなたはXの投稿キュレーターです。
 
@@ -461,7 +512,7 @@ async function collectGenericPosts(
 【ジャンル】${genreConfig.name}
 【検索クエリ】${genreConfig.query}
 【条件】直近24時間以内の日本語Post
-
+${oldMediaInstructions}
 【出力形式】
 \`\`\`json
 {
@@ -469,17 +520,20 @@ async function collectGenericPosts(
     {
       "author_username": "ユーザー名",
       "author_name": "表示名",
-      "text": "投稿内容",
+      "text": "投稿内容（できるだけ全文、最低100文字以上）",
       "url": "https://x.com/username/status/投稿ID",
       "likes": 数値,
       "retweets": 数値,
-      "summary": "内容の要約"
+      "summary": "何を批判しているかの要約",
+      "target_media": "批判対象のメディア名（NHK、朝日新聞など）",
+      "media_action": "オールドメディアが具体的に何をしたか（例：○○事件を報道しなかった、△△の発言を切り取った）",
+      "criticism_point": "批判のポイント（偏向報道、捏造、印象操作、報道しない自由など）"
     }
   ]
 }
 \`\`\`
 
-10件出力。実在するPostのみ。`;
+10件出力。実在するPostのみ。「オールドメディアが何をしたか」と「それへの批判」の両方が分かる投稿を優先。`;
 
   try {
     const response = await fetch(GROK_API_URL, {
@@ -503,6 +557,179 @@ async function collectGenericPosts(
     console.error(`[Collect ${genreConfig.id}] Error:`, error);
     return { posts: [], annotations: [] };
   }
+}
+
+// 災害ニュース用Post収集
+async function collectDisasterPosts(
+  genreConfig: { id: string; name: string; query: string },
+  apiKey: string
+): Promise<{ posts: any[]; annotations: any[] }> {
+  const now = new Date();
+  // 災害情報は直近12時間を収集（より新鮮な情報を優先）
+  const fromDate = new Date(now.getTime() - 12 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const toDate = now.toISOString().split('T')[0];
+
+  const prompt = `
+あなたは日本全国の災害情報を収集する専門家です。
+
+【番組】X災害ニュース
+【ジャンル】${genreConfig.name}
+【検索クエリ】${genreConfig.query}
+【条件】直近12時間以内の日本語Post
+
+【重要：災害情報収集のポイント】
+
+★最重要★ 現地からのリアルタイム情報を優先：
+- 「今、○○で地震があった」「○○市で浸水している」など現地の生の声
+- 具体的な地名・場所が含まれる投稿
+- 被害状況や避難情報を含む投稿
+
+★信頼性の高い情報源：
+- 気象庁、自治体、消防、警察の公式アカウント
+- 報道機関の速報
+- 現地住民の目撃情報
+
+★収集すべき情報：
+- 災害の種類と規模
+- 発生場所（都道府県、市区町村、地域名）
+- 被害状況（人的被害、建物被害、インフラ被害）
+- 避難情報、交通情報
+- 救助・復旧活動の状況
+
+【出力形式】
+\`\`\`json
+{
+  "posts": [
+    {
+      "author_username": "ユーザー名",
+      "author_name": "表示名（公式アカウントの場合は組織名）",
+      "text": "投稿内容（できるだけ全文）",
+      "url": "https://x.com/username/status/投稿ID",
+      "likes": 数値,
+      "retweets": 数値,
+      "location": "災害発生場所（都道府県・市区町村）",
+      "disaster_type": "災害の種類（地震/津波/豪雨/土砂崩れ/台風/洪水など）",
+      "severity": "深刻度（注意/警戒/緊急）",
+      "info_type": "情報種別（速報/被害状況/避難情報/復旧情報）",
+      "source_type": "情報源（公式/報道/現地住民/一般）"
+    }
+  ]
+}
+\`\`\`
+
+10件出力。実在するPostのみ。デマや不確かな情報は除外。`;
+
+  try {
+    const response = await fetch(GROK_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'grok-4-1-fast-reasoning',
+        tools: [{ type: 'x_search', x_search: { from_date: fromDate, to_date: toDate } }],
+        input: prompt,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error(`[Disaster ${genreConfig.id}] API error: ${response.status}`);
+      throw new Error(`Grok API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log(`[Disaster ${genreConfig.id}] Got response`);
+    return extractDisasterPostsFromResponse(data, genreConfig.id);
+  } catch (error) {
+    console.error(`[Disaster ${genreConfig.id}] Error:`, error);
+    return { posts: [], annotations: [] };
+  }
+}
+
+// 災害Post専用の抽出関数
+function extractDisasterPostsFromResponse(data: any, genre: string): { posts: any[]; annotations: any[] } {
+  const posts: any[] = [];
+  const allAnnotations: any[] = [];
+  const fullText = extractTextFromResponse(data);
+
+  // JSON抽出
+  let jsonText = '';
+  const jsonBlockMatch = fullText.match(/```json\s*([\s\S]*?)```/);
+  if (jsonBlockMatch) {
+    jsonText = jsonBlockMatch[1].trim();
+  }
+
+  if (!jsonText) {
+    const jsonObjectMatch = fullText.match(/\{\s*"posts"\s*:\s*\[[\s\S]*?\]\s*\}/);
+    if (jsonObjectMatch) {
+      jsonText = jsonObjectMatch[0];
+    }
+  }
+
+  if (jsonText) {
+    try {
+      const parsed = JSON.parse(jsonText);
+      const postsArray = parsed.posts || (Array.isArray(parsed) ? parsed : []);
+
+      for (const p of postsArray) {
+        const idMatch = p.url?.match(/status\/(\d+)/);
+        const postId = idMatch ? idMatch[1] : Date.now().toString();
+
+        posts.push({
+          id: postId,
+          author: {
+            id: p.author_username || p.username || 'unknown',
+            name: p.author_name || p.name || 'ユーザー',
+            username: p.author_username || p.username || 'unknown',
+          },
+          text: p.text || p.content || '',
+          url: p.url || `https://x.com/i/status/${postId}`,
+          metrics: {
+            likes: p.likes || 0,
+            retweets: p.retweets || 0,
+            replies: p.replies || 0,
+          },
+          // 災害ニュース専用フィールド
+          location: p.location || '',
+          disasterType: p.disaster_type || '',
+          severity: p.severity || '',
+          infoType: p.info_type || '',
+          sourceType: p.source_type || '',
+          genre: genre,
+          createdAt: new Date().toISOString(),
+        });
+      }
+    } catch (e) {
+      console.error('[ExtractDisaster] Failed to parse JSON:', e);
+    }
+  }
+
+  // annotations抽出
+  if (data.output && Array.isArray(data.output)) {
+    for (const item of data.output) {
+      if (item.content && Array.isArray(item.content)) {
+        for (const content of item.content) {
+          if (content.annotations && Array.isArray(content.annotations)) {
+            for (const ann of content.annotations) {
+              const url = ann.url || ann.url_citation?.url;
+              if (url && url.includes('/status/')) {
+                const statusIdMatch = url.match(/status\/(\d+)/);
+                if (statusIdMatch) {
+                  allAnnotations.push({
+                    url: `https://x.com/i/status/${statusIdMatch[1]}`,
+                    statusId: statusIdMatch[1]
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return { posts: posts.slice(0, 10), annotations: allAnnotations };
 }
 
 // レガシーPost収集（X Timeline Radio用）
