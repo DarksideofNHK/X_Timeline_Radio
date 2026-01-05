@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-// Gemini API（gemini-2.5-flash: Google Mapsグラウンディング対応）
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+// Gemini API（gemini-2.0-flash-001: 高速モデル、タイムアウト対策）
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-001:generateContent';
 
 // 番組タイプ設定（インライン定義）
 const INLINE_SHOW_CONFIGS: Record<string, { name: string; voice: string; bgm: string; allowDownload: boolean }> = {
@@ -92,7 +92,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
         temperature: 0.85,
-        maxOutputTokens: 65536,
+        maxOutputTokens: 50000,  // タイムアウト対策で削減（65536→50000）
         responseMimeType: 'application/json',
       },
     };
@@ -349,7 +349,7 @@ ${allPostsText}
 
    ※オープニングは番組の「つかみ」です。リスナーが「へー」と思える小ネタで興味を引き、前向きな気持ちで本編に入れるようにしてください。
 
-2. **7つのコーナー**（各コーナー10件の投稿を全て紹介）
+2. **7つのコーナー**（各コーナー最大8件を厳選して紹介）
    - 🔥 今バズってる話題
    - 🏛️ 政治ニュース
    - 💹 経済・マネー
@@ -358,7 +358,7 @@ ${allPostsText}
    - 🔬 科学・テクノロジー
    - 🌍 国際ニュース
 
-   **【超重要】提供された投稿は10件全て紹介してください。1件も省略しないこと！**
+   **【重要】各コーナー最大8件を厳選。特に注目度の高い投稿を優先的に紹介してください。**
 
    **各コーナーの構成：**
 
@@ -367,7 +367,7 @@ ${allPostsText}
       - なぜ今日この話題が盛り上がっているのか背景を解説
       - 例：「今バズってる話題のコーナーです。今日はお正月明けということもあり、仕事始めに関する投稿や、年末年始の振り返りが目立ちますね。特に新年の抱負を語る投稿が多くの共感を集めているようです。では早速見ていきましょう。」
 
-   B. **投稿の紹介**（全10件を洞察付きで紹介）
+   B. **投稿の紹介**（最大8件を洞察付きで紹介）
 
       **各投稿には必ず以下の要素を含めること：**
       1. 投稿者の紹介
@@ -435,7 +435,7 @@ JSON形式で出力。scriptは必ず「そのまま読み上げられる」テ�
       "genre": "entertainment",
       "title": "🎬 エンタメ",
       "script": "エンタメコーナーです。今日は新年ということもあり、ブイチューバーや声優さんからの新年挨拶や、プレゼントキャンペーンの投稿が目立ちますね。では早速見ていきましょう。まずはプレゼントキャンペーンから。ニタミューズメントさんの投稿です。「新春プレゼントキャンペーン第三弾...」実機プレゼントは夢がありますね。同じくキャンペーン系で、アールシーリジェクトさんの投稿です。「いつもリジェクトを応援してくださるファンの皆様...」豪華なプレゼントですね。続いて新年挨拶に移りましょう。ウサダペコラさんの投稿です。「新春三期生24時間配信、完走...」完走お疲れ様でした。以上、エンタメコーナーでした。",
-      "estimatedDuration": 180
+      "estimatedDuration": 140
     }
   ],
   "totalDuration": 20
