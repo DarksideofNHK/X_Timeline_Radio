@@ -22,7 +22,7 @@ interface GuestResult {
 
 export function GuestMode() {
   const [password, setPassword] = useState('');
-  const [showType, setShowType] = useState<'x-timeline-radio' | 'disaster-news'>('x-timeline-radio');
+  const [showType, setShowType] = useState<'x-timeline-radio' | 'politician-watch' | 'old-media-buster' | 'disaster-news'>('x-timeline-radio');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<GuestResult | null>(null);
@@ -87,6 +87,8 @@ export function GuestMode() {
 
   const showTypeOptions = [
     { id: 'x-timeline-radio', name: 'X Timeline Radio', description: '今バズってる話題' },
+    { id: 'politician-watch', name: '政治家ウオッチ', description: '政党別の発言追跡' },
+    { id: 'old-media-buster', name: 'オールドメディアをぶっ壊せ', description: 'メディア批判' },
     { id: 'disaster-news', name: 'X災害ニュース', description: '災害情報速報' },
   ] as const;
 
