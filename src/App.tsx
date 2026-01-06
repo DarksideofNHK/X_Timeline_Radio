@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore, unlockAudio } from './store/useStore';
 import { Settings } from './components/Settings';
 import { Player } from './components/Player';
@@ -6,11 +6,30 @@ import { SegmentList } from './components/SegmentList';
 import { PostList, Playlist } from './components/Playlist';
 import { SectionIndicator } from './components/SectionIndicator';
 import { RelatedPosts } from './components/RelatedPosts';
+import { GuestMode } from './components/GuestMode';
 import { formatScriptDate } from './lib/scriptStorage';
 import { SHOW_TYPES, getShowType, isDownloadAllowed } from './lib/showTypes';
 import type { ProgramMode, ShowTypeId } from './types';
 
+// URLパラメータでゲストモードをチェック
+function useGuestMode() {
+  const [isGuestMode, setIsGuestMode] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setIsGuestMode(params.get('guest') === '1');
+  }, []);
+
+  return isGuestMode;
+}
+
 export default function App() {
+  const isGuestMode = useGuestMode();
+
+  // ゲストモードの場合は専用UIを表示
+  if (isGuestMode) {
+    return <GuestMode />;
+  }
   // シンプルモード用
   const program = useStore((state) => state.program);
   const initializeProgram = useStore((state) => state.initializeProgram);
