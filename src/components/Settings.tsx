@@ -53,11 +53,9 @@ export function Settings() {
 
   const handleBgmVolumeChange = (volume: number) => {
     setAudioSettings({ bgmVolume: volume });
-    // 再生中なら即座に音量を反映
-    if (bgmEnabled) {
-      const volumeDecimal = getBgmVolumeDecimal(volume);
-      bgmManager.setConfig({ volume: volumeDecimal });
-    }
+    // 常にbgmManagerの設定を更新（再生中なら即座に反映、停止中でも次回再生時に使用）
+    const volumeDecimal = getBgmVolumeDecimal(volume);
+    bgmManager.setConfig({ volume: volumeDecimal });
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
