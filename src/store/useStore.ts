@@ -149,6 +149,14 @@ function generatePostScript(post: BuzzPost, index: number, total: number): strin
   return `${index}番目の投稿です。${post.author.name}さんからの投稿。「${cleanText}」${metricsText}${buzzReasonText}`;
 }
 
+// ゲストモード判定（'GUEST_MODE'の場合はAPIキーを送らない）
+function getApiKeyForRequest(key: string | undefined): string | undefined {
+  if (!key || key === 'GUEST_MODE') {
+    return undefined;  // サーバーは環境変数を使用
+  }
+  return key;
+}
+
 // リトライ設定
 const MAX_RETRIES = 3;
 const INITIAL_RETRY_DELAY = 2000; // 2秒
@@ -203,7 +211,7 @@ async function generateAudioUrl(
       const response = await fetch('/api/generate-audio-openai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ script: cleanedScript, apiKey: openaiApiKey, voice: openaiVoiceId, showType }),
+        body: JSON.stringify({ script: cleanedScript, apiKey: getApiKeyForRequest(openaiApiKey), voice: openaiVoiceId, showType }),
       });
 
       if (response.ok) {
@@ -545,6 +553,9 @@ interface AppState {
   currentAudio: HTMLAudioElement | null;
   stopRequested: boolean;
 
+  // ゲストモード
+  isGuestMode: boolean;
+
   // 設定
   apiConfig: ApiConfig;
   audioSettings: AudioSettings;
@@ -608,6 +619,10 @@ export const useStore = create<AppState>()(
       isInitializing: false,
       currentAudio: null,
       stopRequested: false,
+
+      // ゲストモード（localStorageから復元）
+      isGuestMode: false,
+
       // APIキーは専用ストレージから読み込み（キャッシュクリアで消えない）
       apiConfig: getApiKeys(),
       audioSettings: {
@@ -718,7 +733,7 @@ export const useStore = create<AppState>()(
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
                     genre,
-                    apiKey: apiConfig.grokApiKey,
+                    apiKey: getApiKeyForRequest(apiConfig.grokApiKey),
                   }),
                 });
 
@@ -1372,7 +1387,7 @@ export const useStore = create<AppState>()(
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
-                    apiKey: apiConfig.grokApiKey,
+                    apiKey: getApiKeyForRequest(apiConfig.grokApiKey),
                     showType,
                   }),
                 });
@@ -1409,7 +1424,7 @@ export const useStore = create<AppState>()(
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                       genre,
-                      apiKey: apiConfig.grokApiKey,
+                      apiKey: getApiKeyForRequest(apiConfig.grokApiKey),
                     }),
                   });
 
@@ -1463,7 +1478,7 @@ export const useStore = create<AppState>()(
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               allPosts,
-              apiKey: apiConfig.geminiApiKey,
+              apiKey: getApiKeyForRequest(apiConfig.geminiApiKey),
               style: 'comprehensive',
               showType: audioSettings.showType, // 番組タイプを渡す
             }),
@@ -1789,6 +1804,8 @@ export const useStore = create<AppState>()(
       partialize: (state) => ({
         // apiConfigは専用ストレージで管理するため除外
         audioSettings: state.audioSettings,
+        // ゲストモード
+        isGuestMode: state.isGuestMode,
         // シンプルモード番組状態
         program: state.program,
         currentSegmentIndex: state.currentSegmentIndex,
@@ -1800,7 +1817,7 @@ export const useStore = create<AppState>()(
         collectedPosts: state.collectedPosts,
       }),
       // バージョン管理（状態構造が変わった時にマイグレーション）
-      version: 2,
+      version: 3,
       // 永続化されたstateと現在のstateをマージ
       merge: (persistedState: any, currentState) => {
         // persistedStateがnullや不正な場合は現在の状態を使用

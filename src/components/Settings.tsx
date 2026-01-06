@@ -5,7 +5,7 @@ import { bgmStorage, type BgmTrack } from '../lib/bgmStorage';
 import { SPEED_OPTIONS, OPENAI_VOICE_OPTIONS, type ProgramMode, type Theme } from '../types';
 
 export function Settings() {
-  const { apiConfig, setApiConfig, audioSettings, setAudioSettings, clearCache } = useStore();
+  const { apiConfig, setApiConfig, audioSettings, setAudioSettings, clearCache, isGuestMode } = useStore();
   const [bgmEnabled, setBgmEnabled] = useState(true);
   const [bgmSource, setBgmSource] = useState<BgmSource>('default');
   const [tracks, setTracks] = useState<BgmTrack[]>([]);
@@ -103,77 +103,102 @@ export function Settings() {
     <div className="bg-bg-card rounded-xl p-6 space-y-4 border border-border-light shadow-sm">
       <h2 className="text-lg font-bold text-text-primary">API設定</h2>
 
-      <div>
-        <label className="block text-sm text-text-secondary mb-1">
-          Grok API Key
-        </label>
-        <input
-          type="password"
-          value={apiConfig.grokApiKey}
-          onChange={(e) => setApiConfig({ grokApiKey: e.target.value })}
-          placeholder="xai-..."
-          className="w-full bg-bg-menu border border-border-light rounded-lg px-3 py-2 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent text-text-primary"
-        />
-        <p className="text-xs text-text-disabled mt-1">
-          <a
-            href="https://x.ai/api"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-accent hover:underline"
+      {/* ゲストモード時はAPIキー入力を非表示 */}
+      {isGuestMode ? (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="flex items-center gap-2 text-green-700">
+            <span className="text-xl">🎟️</span>
+            <span className="font-medium">ゲストモードで利用中</span>
+          </div>
+          <p className="text-sm text-green-600 mt-2">
+            APIキーはサーバー側で管理されています。すべての機能をご利用いただけます。
+          </p>
+          <button
+            onClick={() => {
+              // ゲストモードを解除
+              useStore.setState({ isGuestMode: false });
+              setApiConfig({ grokApiKey: '', geminiApiKey: '', openaiApiKey: '' });
+            }}
+            className="mt-3 px-3 py-1.5 text-sm bg-bg-menu hover:bg-hover-bg rounded-lg text-text-secondary border border-border-light transition-colors"
           >
-            x.ai/api
-          </a>
-          で取得
-        </p>
-      </div>
+            ゲストモードを解除
+          </button>
+        </div>
+      ) : (
+        <>
+          <div>
+            <label className="block text-sm text-text-secondary mb-1">
+              Grok API Key
+            </label>
+            <input
+              type="password"
+              value={apiConfig.grokApiKey}
+              onChange={(e) => setApiConfig({ grokApiKey: e.target.value })}
+              placeholder="xai-..."
+              className="w-full bg-bg-menu border border-border-light rounded-lg px-3 py-2 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent text-text-primary"
+            />
+            <p className="text-xs text-text-disabled mt-1">
+              <a
+                href="https://x.ai/api"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-accent hover:underline"
+              >
+                x.ai/api
+              </a>
+              で取得
+            </p>
+          </div>
 
-      <div>
-        <label className="block text-sm text-text-secondary mb-1">
-          Gemini API Key（スクリプト生成 / TTS）
-        </label>
-        <input
-          type="password"
-          value={apiConfig.geminiApiKey}
-          onChange={(e) => setApiConfig({ geminiApiKey: e.target.value })}
-          placeholder="AIzaSy..."
-          className="w-full bg-bg-menu border border-border-light rounded-lg px-3 py-2 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent text-text-primary"
-        />
-        <p className="text-xs text-text-disabled mt-1">
-          <a
-            href="https://aistudio.google.com/apikey"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-accent hover:underline"
-          >
-            Google AI Studio
-          </a>
-          で取得
-        </p>
-      </div>
+          <div>
+            <label className="block text-sm text-text-secondary mb-1">
+              Gemini API Key（スクリプト生成 / TTS）
+            </label>
+            <input
+              type="password"
+              value={apiConfig.geminiApiKey}
+              onChange={(e) => setApiConfig({ geminiApiKey: e.target.value })}
+              placeholder="AIzaSy..."
+              className="w-full bg-bg-menu border border-border-light rounded-lg px-3 py-2 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent text-text-primary"
+            />
+            <p className="text-xs text-text-disabled mt-1">
+              <a
+                href="https://aistudio.google.com/apikey"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-accent hover:underline"
+              >
+                Google AI Studio
+              </a>
+              で取得
+            </p>
+          </div>
 
-      <div>
-        <label className="block text-sm text-text-secondary mb-1">
-          OpenAI API Key（TTS用・おすすめ）
-        </label>
-        <input
-          type="password"
-          value={apiConfig.openaiApiKey}
-          onChange={(e) => setApiConfig({ openaiApiKey: e.target.value })}
-          placeholder="sk-..."
-          className="w-full bg-bg-menu border border-border-light rounded-lg px-3 py-2 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent text-text-primary"
-        />
-        <p className="text-xs text-text-disabled mt-1">
-          <a
-            href="https://platform.openai.com/api-keys"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-accent hover:underline"
-          >
-            OpenAI Platform
-          </a>
-          で取得（$15/100万文字・安定）
-        </p>
-      </div>
+          <div>
+            <label className="block text-sm text-text-secondary mb-1">
+              OpenAI API Key（TTS用・おすすめ）
+            </label>
+            <input
+              type="password"
+              value={apiConfig.openaiApiKey}
+              onChange={(e) => setApiConfig({ openaiApiKey: e.target.value })}
+              placeholder="sk-..."
+              className="w-full bg-bg-menu border border-border-light rounded-lg px-3 py-2 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent text-text-primary"
+            />
+            <p className="text-xs text-text-disabled mt-1">
+              <a
+                href="https://platform.openai.com/api-keys"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-accent hover:underline"
+              >
+                OpenAI Platform
+              </a>
+              で取得（$15/100万文字・安定）
+            </p>
+          </div>
+        </>
+      )}
 
       <div className="pt-4 border-t border-border-light">
         <h3 className="text-sm font-bold text-text-secondary mb-3">テーマ</h3>

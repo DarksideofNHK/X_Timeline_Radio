@@ -112,7 +112,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { genre, showType, apiKey } = req.body;
+    const { genre, showType, apiKey: requestApiKey } = req.body;
+
+    // APIキーがリクエストにない場合は環境変数から取得（ゲストモード対応）
+    const apiKey = requestApiKey || process.env.XAI_API_KEY;
+
+    if (!apiKey) {
+      return res.status(401).json({ error: 'API key required' });
+    }
 
     // 新形式: showTypeが指定された場合
     if (showType && INLINE_SHOW_TYPES[showType]) {

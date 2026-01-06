@@ -78,7 +78,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { allPosts, apiKey, showType } = req.body;
+    const { allPosts, apiKey: requestApiKey, showType } = req.body;
+
+    // APIキーがリクエストにない場合は環境変数から取得（ゲストモード対応）
+    const apiKey = requestApiKey || process.env.GEMINI_API_KEY;
+
+    if (!apiKey) {
+      return res.status(401).json({ error: 'Gemini API key required' });
+    }
 
     // 日付情報を生成
     const now = new Date();

@@ -159,7 +159,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { script, apiKey, voice = 'nova', speed = 1.0, showType = 'x-timeline-radio' } = req.body;
+    const { script, apiKey: requestApiKey, voice = 'nova', speed = 1.0, showType = 'x-timeline-radio' } = req.body;
+
+    // APIキーがリクエストにない場合は環境変数から取得（ゲストモード対応）
+    const apiKey = requestApiKey || process.env.OPENAI_API_KEY;
+
+    if (!apiKey) {
+      return res.status(401).json({ error: 'OpenAI API key required' });
+    }
 
     // スクリプトを適切な長さに分割（最大4096文字）
     const maxLength = 4000;
