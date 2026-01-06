@@ -11,14 +11,13 @@ import { formatScriptDate } from './lib/scriptStorage';
 import { SHOW_TYPES, getShowType, isDownloadAllowed } from './lib/showTypes';
 import type { ProgramMode, ShowTypeId } from './types';
 
-// URLパラメータでゲストモードをチェック
+// URLパラメータでゲストモードをチェック（同期的に初期値を決定）
 function useGuestMode() {
-  const [isGuestMode, setIsGuestMode] = useState(false);
-
-  useEffect(() => {
+  const [isGuestMode] = useState(() => {
+    if (typeof window === 'undefined') return false;
     const params = new URLSearchParams(window.location.search);
-    setIsGuestMode(params.get('guest') === '1');
-  }, []);
+    return params.get('guest') === '1';
+  });
 
   return isGuestMode;
 }
