@@ -109,12 +109,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const { showType = 'x-timeline-radio' } = req.body;
 
-    // 許可された番組タイプ
-    const allowedShowTypes = ['x-timeline-radio', 'disaster-news'];
+    // 全ての番組タイプを許可
+    const allowedShowTypes = [
+      'x-timeline-radio',
+      'politician-watch',
+      'old-media-buster',
+      'disaster-news'
+    ];
     if (!allowedShowTypes.includes(showType)) {
       return res.status(400).json({
         error: 'Invalid show type',
-        message: `ゲストモードで利用可能な番組: ${allowedShowTypes.join(', ')}`,
+        message: `利用可能な番組: ${allowedShowTypes.join(', ')}`,
         allowedShowTypes
       });
     }
