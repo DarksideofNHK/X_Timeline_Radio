@@ -31,14 +31,14 @@ export function GuestMode() {
 
       if (response.ok && data.success) {
         // 認証成功: ゲストモードとしてストアに設定
-        useStore.setState({
-          isGuestMode: true,
-          apiConfig: {
-            grokApiKey: 'GUEST_MODE',
-            geminiApiKey: 'GUEST_MODE',
-            openaiApiKey: 'GUEST_MODE',
-          },
+        // setApiConfigを使ってapiKeyStorageにも保存する（リロード後も維持されるように）
+        const store = useStore.getState();
+        store.setApiConfig({
+          grokApiKey: 'GUEST_MODE',
+          geminiApiKey: 'GUEST_MODE',
+          openaiApiKey: 'GUEST_MODE',
         });
+        useStore.setState({ isGuestMode: true });
         setIsAuthenticated(true);
         // URLからguestパラメータを削除して通常UIに移行
         window.history.replaceState({}, '', window.location.pathname);

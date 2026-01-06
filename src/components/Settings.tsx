@@ -250,7 +250,7 @@ export function Settings() {
             <div className="text-xs opacity-70 mt-1">Geminiが20分番組を生成</div>
           </button>
         </div>
-        {audioSettings.programMode === 'ai-script' && (
+        {audioSettings.programMode === 'ai-script' && !isGuestMode && (
           apiConfig.geminiApiKey ? (
             <p className="text-xs text-green-600 mb-2">
               ✅ Gemini APIキーが設定されています
