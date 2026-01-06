@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { useStore } from '../store/useStore';
+import type { ShowTypeId } from '../types';
 
 interface GuestUsage {
   used: number;
@@ -27,6 +29,41 @@ export function GuestMode() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<GuestResult | null>(null);
   const [usage, setUsage] = useState<GuestUsage | null>(null);
+
+  // ストアからプレイヤー関連の状態を取得
+  const setAudioSettings = useStore((state) => state.setAudioSettings);
+
+  // 生成した番組を再生画面で開く
+  const handlePlayGenerated = () => {
+    if (!result?.script) return;
+
+    // ストアにAI番組をセット
+    const store = useStore.getState();
+
+    // AIモードに設定
+    setAudioSettings({
+      programMode: 'ai-script',
+      showType: result.showType as ShowTypeId
+    });
+
+    // aiProgramを直接セット（ストアの内部状態を更新）
+    useStore.setState({
+      aiProgram: {
+        id: `guest-${Date.now()}`,
+        sections: result.script.sections || [],
+        totalDuration: result.script.totalDuration || 20,
+        status: 'ready',
+      },
+      currentSectionIndex: 0,
+      currentChunkIndex: 0,
+      isInitializing: false,
+      isGeneratingScript: false,
+    });
+
+    // URLから?guestパラメータを削除して通常モードに切り替え
+    window.history.replaceState({}, '', window.location.pathname);
+    window.location.reload();
+  };
 
   // 使用状況を取得
   useEffect(() => {
@@ -187,7 +224,15 @@ export function GuestMode() {
               ✅ 生成完了
             </h2>
 
-            <div className="space-y-3">
+            {/* 再生ボタン */}
+            <button
+              onClick={handlePlayGenerated}
+              className="w-full py-4 mb-4 rounded-lg font-bold text-lg bg-purple-600 hover:bg-purple-500 text-white transition-colors"
+            >
+              ▶ 再生画面へ
+            </button>
+
+            <div className="space-y-3 text-sm">
               <div>
                 <span className="text-text-secondary">番組タイプ: </span>
                 <span className="font-medium">{result.showType}</span>
@@ -197,10 +242,6 @@ export function GuestMode() {
                 <span className="font-medium">{result.script?.sections?.length || 0}</span>
               </div>
               <div>
-                <span className="text-text-secondary">推定コスト: </span>
-                <span className="font-medium">{result.estimatedCost}</span>
-              </div>
-              <div>
                 <span className="text-text-secondary">残り回数: </span>
                 <span className="font-medium">{result.usage.remaining}/{result.usage.limit}</span>
               </div>
@@ -208,10 +249,10 @@ export function GuestMode() {
 
             {/* 台本プレビュー */}
             <details className="mt-4">
-              <summary className="cursor-pointer text-accent hover:underline">
-                台本を表示
+              <summary className="cursor-pointer text-accent hover:underline text-sm">
+                台本を表示（デバッグ用）
               </summary>
-              <pre className="mt-2 p-3 bg-bg-base rounded text-sm overflow-auto max-h-96">
+              <pre className="mt-2 p-3 bg-bg-base rounded text-xs overflow-auto max-h-64">
                 {JSON.stringify(result.script, null, 2)}
               </pre>
             </details>
@@ -222,10 +263,9 @@ export function GuestMode() {
         <div className="mt-6 p-4 bg-bg-secondary rounded-lg text-sm text-text-secondary">
           <h3 className="font-medium mb-2">ℹ️ 注意事項</h3>
           <ul className="list-disc list-inside space-y-1">
-            <li>ゲストモードでは一部の番組タイプのみ利用可能</li>
             <li>1日あたりの生成回数に制限があります</li>
             <li>生成には1-2分程度かかります</li>
-            <li>生成された台本はブラウザに保存されません</li>
+            <li>「再生画面へ」で通常のプレイヤーに移動します</li>
           </ul>
         </div>
       </div>
