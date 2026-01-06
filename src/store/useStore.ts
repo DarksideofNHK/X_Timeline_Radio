@@ -8,6 +8,17 @@ import { getSavedScripts, saveScript, deleteScript, type SavedScript } from '../
 import { getApiKeys, saveApiKeys } from '../lib/apiKeyStorage';
 import { mediaSessionManager } from '../lib/mediaSession';
 
+// モバイルデバイス判定
+function isMobileDevice(): boolean {
+  if (typeof window === 'undefined') return false;
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
+// デフォルトBGM音量を取得（PC: 30%, モバイル: 5%）
+function getDefaultBgmVolume(): number {
+  return isMobileDevice() ? 5 : 30;
+}
+
 // 音声設定（OpenAI TTSのみ使用）
 interface AudioSettings {
   openaiVoiceId: OpenAIVoiceId;
@@ -631,7 +642,7 @@ export const useStore = create<AppState>()(
         programMode: 'simple',  // デフォルトはシンプルモード
         theme: 'light',  // デフォルトはライトテーマ
         showType: 'x-timeline-radio',  // デフォルトはX Timeline Radio
-        bgmVolume: 5,  // デフォルトはかなり小さめ（5%）
+        bgmVolume: getDefaultBgmVolume(),  // PC: 30%, モバイル: 5%
       },
       error: null,
 
