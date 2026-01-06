@@ -23,6 +23,7 @@ function useGuestMode() {
   return isGuestMode;
 }
 
+// ルーターコンポーネント
 export default function App() {
   const isGuestMode = useGuestMode();
 
@@ -30,6 +31,12 @@ export default function App() {
   if (isGuestMode) {
     return <GuestMode />;
   }
+
+  return <MainApp />;
+}
+
+// メインアプリコンポーネント
+function MainApp() {
   // シンプルモード用
   const program = useStore((state) => state.program);
   const initializeProgram = useStore((state) => state.initializeProgram);
