@@ -1,52 +1,71 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { kv } from '@vercel/kv';
 
 // ゲスト認証用パスワード（環境変数から取得）
 const GUEST_PASSWORD = process.env.GUEST_PASSWORD || '';
 
 // 1日あたりの生成上限
-const DAILY_LIMIT = parseInt(process.env.GUEST_DAILY_LIMIT || '10', 10);
+const DAILY_LIMIT = parseInt(process.env.GUEST_DAILY_LIMIT || '20', 10);
 
-// レート制限用のインメモリストレージ（Vercel Serverlessでは再デプロイでリセット）
-// 本格運用時はRedisやKVストアを使用
-interface UsageRecord {
-  count: number;
-  date: string;
-}
-
-const usageMap = new Map<string, UsageRecord>();
-
-function getTodayString(): string {
+// 日本時間の今日の日付を取得
+function getTodayStringJST(): string {
   const now = new Date();
-  return now.toISOString().split('T')[0]; // YYYY-MM-DD
+  const jstOffset = 9 * 60 * 60 * 1000; // UTC+9
+  const jstDate = new Date(now.getTime() + jstOffset);
+  return jstDate.toISOString().split('T')[0]; // YYYY-MM-DD
 }
 
-function checkAndUpdateUsage(ip: string): { allowed: boolean; remaining: number; resetAt: string } {
-  const today = getTodayString();
-  const record = usageMap.get(ip);
+// KVのキーを生成
+function getKVKey(ip: string): string {
+  const today = getTodayStringJST();
+  // IPアドレスをハッシュ化して短くする
+  const ipHash = ip.replace(/[.:]/g, '_');
+  return `guest:${today}:${ipHash}`;
+}
 
-  if (!record || record.date !== today) {
-    // 新しい日または初回
-    usageMap.set(ip, { count: 1, date: today });
+// 使用状況を確認・更新（Vercel KV使用）
+async function checkAndUpdateUsage(ip: string): Promise<{ allowed: boolean; remaining: number; resetAt: string }> {
+  const today = getTodayStringJST();
+  const key = getKVKey(ip);
+
+  try {
+    // 現在の使用回数を取得
+    const currentCount = await kv.get<number>(key) || 0;
+
+    if (currentCount >= DAILY_LIMIT) {
+      return { allowed: false, remaining: 0, resetAt: `${today}T23:59:59+09:00` };
+    }
+
+    // カウントを増やす（24時間後に自動期限切れ）
+    await kv.set(key, currentCount + 1, { ex: 86400 }); // 24時間TTL
+
+    return {
+      allowed: true,
+      remaining: DAILY_LIMIT - currentCount - 1,
+      resetAt: `${today}T23:59:59+09:00`
+    };
+  } catch (error) {
+    console.error('[Guest] KV error:', error);
+    // KVエラー時はフォールバックとして許可（ただしログに記録）
     return { allowed: true, remaining: DAILY_LIMIT - 1, resetAt: `${today}T23:59:59+09:00` };
   }
-
-  if (record.count >= DAILY_LIMIT) {
-    return { allowed: false, remaining: 0, resetAt: `${today}T23:59:59+09:00` };
-  }
-
-  record.count++;
-  return { allowed: true, remaining: DAILY_LIMIT - record.count, resetAt: `${today}T23:59:59+09:00` };
 }
 
-function getUsageStatus(ip: string): { used: number; remaining: number; limit: number } {
-  const today = getTodayString();
-  const record = usageMap.get(ip);
+// 使用状況を取得
+async function getUsageStatus(ip: string): Promise<{ used: number; remaining: number; limit: number }> {
+  const key = getKVKey(ip);
 
-  if (!record || record.date !== today) {
+  try {
+    const currentCount = await kv.get<number>(key) || 0;
+    return {
+      used: currentCount,
+      remaining: DAILY_LIMIT - currentCount,
+      limit: DAILY_LIMIT
+    };
+  } catch (error) {
+    console.error('[Guest] KV error:', error);
     return { used: 0, remaining: DAILY_LIMIT, limit: DAILY_LIMIT };
   }
-
-  return { used: record.count, remaining: DAILY_LIMIT - record.count, limit: DAILY_LIMIT };
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -73,7 +92,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // GET: 使用状況の確認
   if (req.method === 'GET') {
-    const status = getUsageStatus(clientIp);
+    const status = await getUsageStatus(clientIp);
     return res.status(200).json({
       ...status,
       costPerGeneration: '$0.10 (≒15円)',
@@ -96,7 +115,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   // レート制限チェック
-  const usageCheck = checkAndUpdateUsage(clientIp);
+  const usageCheck = await checkAndUpdateUsage(clientIp);
   if (!usageCheck.allowed) {
     return res.status(429).json({
       error: 'Daily limit exceeded',
