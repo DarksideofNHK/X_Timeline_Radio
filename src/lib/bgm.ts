@@ -123,14 +123,24 @@ class BgmManager {
       }
     };
 
-    try {
-      await this.audioElement.play();
-      this.isPlaying = true;
-      console.log(`[BGM] Playing: ${trackName}`);
-    } catch (e) {
-      console.error('[BGM] Failed to play:', e);
-      this.isPlaying = false;
-    }
+    // 再生開始（AbortErrorの場合はリトライ）
+    const tryPlay = async (retryCount = 0): Promise<void> => {
+      try {
+        await this.audioElement!.play();
+        this.isPlaying = true;
+        console.log(`[BGM] Playing: ${trackName}`);
+      } catch (e: unknown) {
+        // AbortErrorは前回のpauseとの競合で発生することがある
+        if (e instanceof Error && e.name === 'AbortError' && retryCount < 3) {
+          console.log(`[BGM] AbortError, retrying in 100ms (attempt ${retryCount + 1}/3)...`);
+          await new Promise(resolve => setTimeout(resolve, 100));
+          return tryPlay(retryCount + 1);
+        }
+        console.error('[BGM] Failed to play:', e);
+        this.isPlaying = false;
+      }
+    };
+    await tryPlay();
   }
 
   // 次の曲を再生
@@ -148,12 +158,21 @@ class BgmManager {
 
     if (this.audioElement) {
       this.audioElement.src = this.currentObjectUrl;
-      try {
-        await this.audioElement.play();
-        console.log(`[BGM] Now playing: ${track.name}`);
-      } catch (e) {
-        console.error('[BGM] Failed to play next:', e);
-      }
+      // 再生開始（AbortErrorの場合はリトライ）
+      const tryPlay = async (retryCount = 0): Promise<void> => {
+        try {
+          await this.audioElement!.play();
+          console.log(`[BGM] Now playing: ${track.name}`);
+        } catch (e: unknown) {
+          if (e instanceof Error && e.name === 'AbortError' && retryCount < 3) {
+            console.log(`[BGM] AbortError on next track, retrying in 100ms...`);
+            await new Promise(resolve => setTimeout(resolve, 100));
+            return tryPlay(retryCount + 1);
+          }
+          console.error('[BGM] Failed to play next:', e);
+        }
+      };
+      await tryPlay();
     }
   }
 
