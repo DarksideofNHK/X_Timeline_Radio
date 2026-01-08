@@ -338,7 +338,16 @@ export function unlockAudio(): Promise<void> {
             resolve();
           })
           .catch((e) => {
-            console.error('[Audio] Failed to unlock audio:', e);
+            // AbortErrorは前回のpause()との競合で発生するが、
+            // オーディオ要素自体は使用可能なので成功として扱う
+            if (e.name === 'AbortError') {
+              audioUnlocked = true;
+              console.log('[Audio] Audio unlock interrupted but element is ready');
+              ttsAudio.currentTime = 0;
+              ttsAudio.volume = 1;
+            } else {
+              console.error('[Audio] Failed to unlock audio:', e);
+            }
             resolve();
           });
       } else {
@@ -355,12 +364,15 @@ export function unlockAudio(): Promise<void> {
 // 音声を即座に停止する関数
 function stopCurrentAudio() {
   isStoppingByUser = true;  // ユーザー停止フラグを立てる
+  audioUnlocked = false;     // アンロックフラグをリセット（次回再生時に再アンロック）
 
   // TTS用のAudio要素を停止
   if (reusableTtsAudio) {
     try {
       reusableTtsAudio.pause();
       reusableTtsAudio.currentTime = 0;
+      // srcをリセットして次回のunlockAudioで競合しないようにする
+      reusableTtsAudio.src = '';
     } catch (e) {
       console.error('[Audio] Error stopping TTS audio:', e);
     }
@@ -376,7 +388,7 @@ function stopCurrentAudio() {
     currentAudioElement = null;
   }
 
-  console.log('[Audio] All audio stopped');
+  console.log('[Audio] All audio stopped, unlock reset');
 }
 
 // HTMLAudioElementを使った再生（バックグラウンド対応・Bluetooth切断対応）
@@ -496,30 +508,41 @@ async function playAudioUrl(audioUrl: string, speed: number = 1.0): Promise<void
       audio.playbackRate = speed;
       audio.volume = 1;  // 音量を最大に設定（unlockで0.01になっている可能性があるため）
 
-      // 再生開始
-      const playPromise = audio.play();
-      if (playPromise) {
-        playPromise
-          .then(() => {
-            console.log('[Audio] HTMLAudioElement playback started');
-          })
-          .catch((e) => {
-            cleanup();
+      // 再生開始（AbortErrorの場合はリトライ）
+      const tryPlay = (retryCount = 0) => {
+        const playPromise = audio.play();
+        if (playPromise) {
+          playPromise
+            .then(() => {
+              console.log('[Audio] HTMLAudioElement playback started');
+            })
+            .catch((e) => {
+              // AbortErrorは前回のpauseとの競合で発生することがある
+              // 少し待ってからリトライする
+              if (e.name === 'AbortError' && retryCount < 3) {
+                console.log(`[Audio] AbortError, retrying in 100ms (attempt ${retryCount + 1}/3)...`);
+                setTimeout(() => tryPlay(retryCount + 1), 100);
+                return;
+              }
 
-            console.error('[Audio] Play failed:', e);
+              cleanup();
 
-            if (audioUrl.startsWith('blob:')) {
-              URL.revokeObjectURL(audioUrl);
-            }
+              console.error('[Audio] Play failed:', e);
 
-            if (isStoppingByUser) {
-              isStoppingByUser = false;
-              resolve();
-            } else {
-              reject(e);
-            }
-          });
-      }
+              if (audioUrl.startsWith('blob:')) {
+                URL.revokeObjectURL(audioUrl);
+              }
+
+              if (isStoppingByUser) {
+                isStoppingByUser = false;
+                resolve();
+              } else {
+                reject(e);
+              }
+            });
+        }
+      };
+      tryPlay();
 
     } catch (e) {
       console.error('[Audio] Playback setup failed:', e);
