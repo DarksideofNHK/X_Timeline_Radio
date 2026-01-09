@@ -112,13 +112,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { genre, showType, apiKey: requestApiKey } = req.body;
+    const { genre, showType, apiKey: requestApiKey, topic, freemiumMode } = req.body;
 
     // APIキーがリクエストにない場合は環境変数から取得（ゲストモード対応）
     const apiKey = requestApiKey || process.env.XAI_API_KEY;
 
     if (!apiKey) {
       return res.status(401).json({ error: 'API key required' });
+    }
+
+    // トピックフィルタ（フリーミアムモード用）
+    const topicFilter = topic?.trim() || '';
+    if (topicFilter) {
+      console.log(`[CollectPosts] Topic filter applied: "${topicFilter}"`);
     }
 
     // 新形式: showTypeが指定された場合
@@ -130,7 +136,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // 政治家ウオッチ用の特別な収集プロンプト
       if (showType === 'politician-watch') {
         const collectPromises = show.genres.map(async (genreConfig) => {
-          const { posts, annotations } = await collectPoliticianPostsSimple(genreConfig, apiKey);
+          const { posts, annotations } = await collectPoliticianPostsSimple(genreConfig, apiKey, topicFilter);
           return { id: genreConfig.id, posts, annotations };
         });
         const results = await Promise.all(collectPromises);
@@ -141,7 +147,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       } else if (showType === 'disaster-news') {
         // 災害ニュース用の収集を並列実行
         const collectPromises = show.genres.map(async (genreConfig) => {
-          const { posts, annotations } = await collectDisasterPosts(genreConfig, apiKey);
+          const { posts, annotations } = await collectDisasterPosts(genreConfig, apiKey, topicFilter);
           return { id: genreConfig.id, posts, annotations };
         });
         const results = await Promise.all(collectPromises);
@@ -152,7 +158,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       } else {
         // オールドメディア等：汎用収集を並列実行
         const collectPromises = show.genres.map(async (genreConfig) => {
-          const { posts, annotations } = await collectGenericPosts(genreConfig, show.name, apiKey);
+          const { posts, annotations } = await collectGenericPosts(genreConfig, show.name, apiKey, topicFilter);
           return { id: genreConfig.id, posts, annotations };
         });
         const results = await Promise.all(collectPromises);
@@ -166,17 +172,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         posts: allPosts,
         showType,
         showName: show.name,
-        annotations: allAnnotations
+        annotations: allAnnotations,
+        topic: topicFilter || undefined
       });
     }
 
-    // レガシー形式: genre のみ指定
+    // X Timeline Radio: 全ジャンルを並列収集
+    if (showType === 'x-timeline-radio') {
+      const allPosts: Record<string, any[]> = {};
+      const allAnnotations: any[] = [];
+
+      const collectPromises = LEGACY_GENRES.map(async (genreConfig) => {
+        const { posts, annotations } = await collectLegacyPosts(genreConfig, apiKey, topicFilter);
+        return { id: genreConfig.id, posts, annotations };
+      });
+      const results = await Promise.all(collectPromises);
+      for (const result of results) {
+        allPosts[result.id] = result.posts;
+        allAnnotations.push(...result.annotations);
+      }
+
+      return res.status(200).json({
+        allPosts,
+        showType: 'x-timeline-radio',
+        showName: 'X Timeline Radio',
+        annotations: allAnnotations,
+        topic: topicFilter || undefined
+      });
+    }
+
+    // レガシー形式: genre のみ指定（単一ジャンル収集）
     const genreConfig = LEGACY_GENRES.find((g) => g.id === genre);
     if (!genreConfig) {
       return res.status(400).json({ error: `Unknown genre: ${genre}` });
     }
 
-    const { posts, annotations } = await collectLegacyPosts(genreConfig, apiKey);
+    const { posts, annotations } = await collectLegacyPosts(genreConfig, apiKey, topicFilter);
     return res.status(200).json({ posts, genre, annotations });
 
   } catch (error: any) {
@@ -188,11 +219,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 // 政治家Post収集（シンプル版 - キーワードベース）
 async function collectPoliticianPostsSimple(
   genreConfig: { id: string; name: string; query: string; camp?: string },
-  apiKey: string
+  apiKey: string,
+  topicFilter: string = ''
 ): Promise<{ posts: any[]; annotations: any[] }> {
   const now = new Date();
   const fromDate = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
   const toDate = now.toISOString().split('T')[0];
+
+  // トピックフィルタがある場合は優先条件を追加
+  const topicCondition = topicFilter
+    ? `\n【ユーザー指定トピック】「${topicFilter}」に関連する投稿を優先的に収集すること`
+    : '';
 
   const prompt = `
 あなたは日本の政治に詳しいXキュレーターです。
@@ -200,7 +237,7 @@ async function collectPoliticianPostsSimple(
 【番組】X政治家ウオッチ
 【収集対象】${genreConfig.name}（${genreConfig.camp || ''}）に関する投稿
 【検索クエリ】${genreConfig.query}
-【条件】直近24時間以内の日本語Post
+【条件】直近24時間以内の日本語Post${topicCondition}
 
 【収集の優先順位】
 1. 政治家本人のX投稿（公式アカウント）
@@ -483,7 +520,8 @@ async function collectPublicReaction(apiKey: string): Promise<any[]> {
 async function collectGenericPosts(
   genreConfig: { id: string; name: string; query: string },
   showName: string,
-  apiKey: string
+  apiKey: string,
+  topicFilter: string = ''
 ): Promise<{ posts: any[]; annotations: any[] }> {
   const now = new Date();
   const fromDate = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
@@ -518,13 +556,18 @@ async function collectGenericPosts(
 - criticism_point: 何が問題か（偏向、捏造、スルー、切り取りなど）
 ` : '';
 
+  // トピックフィルタがある場合は優先条件を追加
+  const topicCondition = topicFilter
+    ? `\n【ユーザー指定トピック】「${topicFilter}」に関連する投稿を優先的に収集すること`
+    : '';
+
   const prompt = `
 あなたはXの投稿キュレーターです。
 
 【番組】${showName}
 【ジャンル】${genreConfig.name}
 【検索クエリ】${genreConfig.query}
-【条件】直近24時間以内の日本語Post
+【条件】直近24時間以内の日本語Post${topicCondition}
 ${oldMediaInstructions}
 【出力形式】
 \`\`\`json
@@ -575,7 +618,8 @@ ${oldMediaInstructions}
 // 災害ニュース用Post収集
 async function collectDisasterPosts(
   genreConfig: { id: string; name: string; query: string },
-  apiKey: string
+  apiKey: string,
+  topicFilter: string = ''
 ): Promise<{ posts: any[]; annotations: any[] }> {
   const now = new Date();
   // 災害情報は直近12時間を収集（より新鮮な情報を優先）
@@ -637,13 +681,18 @@ async function collectDisasterPosts(
 
   const instruction = genreInstructions[genreConfig.id] || '';
 
+  // トピックフィルタがある場合は優先条件を追加
+  const topicCondition = topicFilter
+    ? `\n【ユーザー指定トピック】「${topicFilter}」に関連する情報を優先的に収集すること`
+    : '';
+
   const prompt = `
 あなたは災害情報の速報キュレーターです。**今まさに起きていること**を集めてください。
 
 【番組】X災害ニュース
 【ジャンル】${genreConfig.name}
 【検索クエリ】${genreConfig.query}
-【条件】直近6時間以内の日本語Post（新しいものを優先）
+【条件】直近6時間以内の日本語Post（新しいものを優先）${topicCondition}
 ${instruction}
 
 【★速報性を最重視★】
@@ -788,11 +837,17 @@ function extractDisasterPostsFromResponse(data: any, genre: string): { posts: an
 // レガシーPost収集（X Timeline Radio用）
 async function collectLegacyPosts(
   genreConfig: { id: string; name: string; query: string },
-  apiKey: string
+  apiKey: string,
+  topicFilter: string = ''
 ): Promise<{ posts: any[]; annotations: any[] }> {
   const now = new Date();
   const fromDate = new Date(now.getTime() - 6 * 60 * 60 * 1000).toISOString().split('T')[0];
   const toDate = now.toISOString().split('T')[0];
+
+  // トピックフィルタがある場合は優先条件を追加
+  const topicCondition = topicFilter
+    ? `\n- 【ユーザー指定トピック】「${topicFilter}」に関連する投稿を優先的に収集すること`
+    : '';
 
   const prompt = `
 あなたはXのバズ投稿キュレーターです。
@@ -801,7 +856,7 @@ async function collectLegacyPosts(
 - ジャンル: ${genreConfig.name}
 - 条件: ${genreConfig.query}
 - 直近6時間以内に投稿された日本語のPost
-- いいね数100以上推奨
+- いいね数100以上推奨${topicCondition}
 
 【出力形式】
 \`\`\`json
