@@ -113,7 +113,6 @@ export const MEDIA_NAMES: Record<string, string> = {
   'AFP': 'エーエフピー',
   'AP': 'エーピー',
   'WHO': 'ダブリューエイチオー',
-  'WHO': 'フー', // 文脈によって使い分け
   'GDP': 'ジーディーピー',
   'SNS': 'エスエヌエス',
   'AI': 'エーアイ',

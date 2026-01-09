@@ -1021,8 +1021,10 @@ export const useStore = create<AppState>()(
           const hasNextSegment = nextSegmentPrefetch && nextSegment;
           if (hasNextSegment) {
             const prefetchedData = await nextSegmentPrefetch;
-            console.log(`[Prefetch] Next segment ready, starting playback...`);
-            get().playSegmentWithPrefetch(nextSegmentIndex, prefetchedData);
+            if (prefetchedData) {
+              console.log(`[Prefetch] Next segment ready, starting playback...`);
+              get().playSegmentWithPrefetch(nextSegmentIndex, prefetchedData);
+            }
           } else {
             // 最後のセグメントの場合はここでステータス更新
             set((state) => {
@@ -1186,8 +1188,10 @@ export const useStore = create<AppState>()(
           const hasNextSegment = nextSegmentPrefetch && nextSegment;
           if (hasNextSegment) {
             const prefetchedNextData = await nextSegmentPrefetch;
-            console.log(`[Prefetch] Next segment ready, starting playback...`);
-            get().playSegmentWithPrefetch(nextSegmentIndex, prefetchedNextData);
+            if (prefetchedNextData) {
+              console.log(`[Prefetch] Next segment ready, starting playback...`);
+              get().playSegmentWithPrefetch(nextSegmentIndex, prefetchedNextData);
+            }
           } else {
             // 最後のセグメントの場合はここでステータス更新
             set((state) => {
