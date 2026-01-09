@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { checkFacts, applyFactCheckFixes, getFactCheckDisclaimer, type FactCheckResult } from './lib/factChecker';
 
 // Gemini APIモデル一覧（2025年最新）
 // https://ai.google.dev/gemini-api/docs/models
@@ -78,7 +79,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { allPosts, apiKey: requestApiKey, showType } = req.body;
+    const { allPosts, apiKey: requestApiKey, showType, enableFactCheck = false } = req.body;
 
     // APIキーがリクエストにない場合は環境変数から取得（ゲストモード対応）
     const apiKey = requestApiKey || process.env.GEMINI_API_KEY;
@@ -197,9 +198,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     console.log(`[FullScript] Total duration: ${totalSeconds}s = ${totalDuration}min`);
 
+    // ファクトチェック（フルモードで有効な場合のみ）
+    let finalSections = sections;
+    let factCheckResult: FactCheckResult | null = null;
+
+    if (enableFactCheck && apiKey) {
+      console.log('[FullScript] Running fact check...');
+      try {
+        factCheckResult = await checkFacts(sections, apiKey);
+
+        if (factCheckResult.issues.length > 0) {
+          console.log(`[FullScript] Found ${factCheckResult.issues.length} issues, applying fixes...`);
+          const fixedSections = applyFactCheckFixes(sections, factCheckResult.issues);
+
+          // 修正された場合、チャンクを再生成
+          finalSections = fixedSections.map((section: any, index: number) => {
+            if (section.script !== sections[index].script) {
+              const chunks = splitIntoChunks(section.script);
+              return { ...section, chunks };
+            }
+            return section;
+          });
+
+          factCheckResult.scriptModified = true;
+        }
+      } catch (e: any) {
+        console.error('[FullScript] Fact check error (continuing without):', e.message);
+      }
+    }
+
+    // 免責事項を取得
+    const disclaimer = getFactCheckDisclaimer(showType || 'x-timeline-radio');
+
     // 番組設定を返す
     return res.status(200).json({
-      sections,
+      sections: finalSections,
       totalDuration,
       showType: showType || 'x-timeline-radio',
       showConfig: showConfig ? {
@@ -208,6 +241,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         bgm: showConfig.bgm,
         allowDownload: showConfig.allowDownload,
       } : null,
+      factCheck: factCheckResult,
+      disclaimer,
     });
   } catch (error: any) {
     console.error('[API] Error generating full script:', error);
