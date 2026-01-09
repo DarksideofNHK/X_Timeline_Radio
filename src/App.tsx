@@ -7,27 +7,35 @@ import { PostList, Playlist } from './components/Playlist';
 import { SectionIndicator } from './components/SectionIndicator';
 import { RelatedPosts } from './components/RelatedPosts';
 import { GuestMode } from './components/GuestMode';
+import { FreemiumMode } from './components/FreemiumMode';
 import { formatScriptDate } from './lib/scriptStorage';
 import { SHOW_TYPES, getShowType, isDownloadAllowed } from './lib/showTypes';
 import type { ProgramMode, ShowTypeId } from './types';
 
-// URLパラメータでゲストモードをチェック（同期的に初期値を決定）
-function useGuestMode() {
-  const [isGuestMode] = useState(() => {
-    if (typeof window === 'undefined') return false;
+// URLパラメータでモードをチェック（同期的に初期値を決定）
+function useAppMode() {
+  const [mode] = useState<'main' | 'guest' | 'free'>(() => {
+    if (typeof window === 'undefined') return 'main';
     const params = new URLSearchParams(window.location.search);
-    return params.get('guest') === '1';
+    if (params.get('free') === '1') return 'free';
+    if (params.get('guest') === '1') return 'guest';
+    return 'main';
   });
 
-  return isGuestMode;
+  return mode;
 }
 
 // ルーターコンポーネント
 export default function App() {
-  const isGuestMode = useGuestMode();
+  const appMode = useAppMode();
+
+  // フリーミアムモードの場合は専用UIを表示
+  if (appMode === 'free') {
+    return <FreemiumMode />;
+  }
 
   // ゲストモードの場合は専用UIを表示
-  if (isGuestMode) {
+  if (appMode === 'guest') {
     return <GuestMode />;
   }
 
