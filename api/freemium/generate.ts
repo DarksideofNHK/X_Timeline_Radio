@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { checkRateLimit, consumeRateLimit, getUsageStatus, getClientIP } from '../lib/rateLimiter';
-import { processDictionary } from '../lib/dictionaryProcessor';
+import { getFactCheckDisclaimer } from '../lib/factChecker';
 
 /**
  * フリーミアム生成エンドポイント
@@ -174,7 +174,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           '無制限生成'
         ]
       },
-      disclaimer: 'この番組はAIが生成したコンテンツです。事実確認は行われていません。'
+      disclaimer: getFactCheckDisclaimer(showType)
     });
 
   } catch (error: any) {
