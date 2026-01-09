@@ -1,6 +1,13 @@
+import { useState, useCallback } from 'react';
 import { useStore, unlockAudio } from '../store/useStore';
 
+// ボタン状態の型定義
+type ButtonState = 'idle' | 'loading' | 'playing' | 'disabled';
+
 export function Player() {
+  // 二重クリック防止用の処理中フラグ
+  const [isProcessing, setIsProcessing] = useState(false);
+
   const {
     // 共通
     isPlaying,
@@ -41,37 +48,54 @@ export function Player() {
 
     const progress = totalChunks > 0 ? Math.round((completedChunks / totalChunks) * 100) : 0;
 
-    const handlePlayPause = () => {
+    const handlePlayPause = useCallback(async () => {
+      // 二重クリック防止
+      if (isProcessing) {
+        console.log('[Player] Already processing, ignoring click');
+        return;
+      }
+
       console.log('[Player] Play button clicked, isPlaying:', isPlaying);
+
       if (isPlaying) {
         console.log('[Player] Stopping playback');
         stopPlayback();
-      } else {
-        console.log('[Player] Starting playback...');
-        // モバイルブラウザ用: オーディオ権限を取得（同期的に呼び出し、待たない）
-        // 重要: unlockAudio()内のplay()呼び出しがユーザージェスチャ内で発生することが必要
-        unlockAudio().then(() => {
-          console.log('[Player] Audio unlock completed');
-        }).catch((e) => {
-          console.error('[Player] Audio unlock failed:', e);
-        });
-        // すぐに再生開始（unlockAudioのplay()呼び出しは既に行われている）
-        playAIScript().catch((e) => {
-          console.error('[Player] Playback error:', e);
-        });
+        return;
       }
-    };
 
-    const handleNextSection = () => {
-      console.log('[Player] Next section button clicked');
-      if (currentSectionIndex < totalSections - 1) {
-        // 同期的にunlockAudioを呼び出し
-        unlockAudio().then(() => {
-          console.log('[Player] Audio unlock completed for next section');
-        });
-        playAISectionFromPosition(currentSectionIndex + 1, 0);
+      // 再生開始処理
+      setIsProcessing(true);
+      try {
+        console.log('[Player] Starting playback...');
+        // モバイルブラウザ用: オーディオ権限を取得
+        await unlockAudio();
+        console.log('[Player] Audio unlock completed');
+        // 再生開始
+        await playAIScript();
+      } catch (e) {
+        console.error('[Player] Playback error:', e);
+      } finally {
+        setIsProcessing(false);
       }
-    };
+    }, [isPlaying, isProcessing, stopPlayback, playAIScript]);
+
+    const handleNextSection = useCallback(async () => {
+      // 二重クリック防止
+      if (isProcessing) return;
+      if (currentSectionIndex >= totalSections - 1) return;
+
+      console.log('[Player] Next section button clicked');
+      setIsProcessing(true);
+      try {
+        await unlockAudio();
+        console.log('[Player] Audio unlock completed for next section');
+        await playAISectionFromPosition(currentSectionIndex + 1, 0);
+      } catch (e) {
+        console.error('[Player] Next section error:', e);
+      } finally {
+        setIsProcessing(false);
+      }
+    }, [isProcessing, currentSectionIndex, totalSections, playAISectionFromPosition]);
 
     return (
       <div className="p-4">
@@ -79,15 +103,15 @@ export function Player() {
           {/* 再生ボタン */}
           <button
             onClick={handlePlayPause}
-            disabled={isPlaying || isPreloading}
+            disabled={isPlaying || isPreloading || isProcessing}
             className={`w-12 h-12 rounded-full flex items-center justify-center text-xl flex-shrink-0 shadow-lg transition-all ${
-              isPlaying || isPreloading
+              isPlaying || isPreloading || isProcessing
                 ? 'bg-gray-400 cursor-not-allowed opacity-50'
                 : 'bg-purple-600 hover:bg-purple-500 text-white'
             }`}
-            title={isPreloading ? '読み込み中...' : '再生'}
+            title={isProcessing ? '処理中...' : isPreloading ? '読み込み中...' : '再生'}
           >
-            {isPreloading ? '⏳' : '▶️'}
+            {isProcessing ? '⏳' : isPreloading ? '⏳' : '▶️'}
           </button>
 
           {/* 停止ボタン */}
@@ -150,11 +174,11 @@ export function Player() {
           {/* 次のセクションボタン */}
           <button
             onClick={handleNextSection}
-            disabled={currentSectionIndex >= totalSections - 1}
+            disabled={currentSectionIndex >= totalSections - 1 || isProcessing}
             className="w-10 h-10 bg-bg-menu hover:bg-hover-bg disabled:opacity-50 disabled:cursor-not-allowed rounded-full flex items-center justify-center text-lg flex-shrink-0 border border-border-light transition-colors"
-            title="次のセクション"
+            title={isProcessing ? '処理中...' : '次のセクション'}
           >
-            ⏭️
+            {isProcessing ? '⏳' : '⏭️'}
           </button>
         </div>
       </div>
@@ -182,15 +206,27 @@ export function Player() {
     : 0;
 
   // シンプルモードの再生ハンドラー
-  const handleSimplePlay = () => {
+  const handleSimplePlay = useCallback(async () => {
+    // 二重クリック防止
+    if (isProcessing) {
+      console.log('[Player] Simple mode: Already processing, ignoring click');
+      return;
+    }
+
     console.log('[Player] Simple play button clicked');
-    // モバイルブラウザ用: オーディオ権限を取得（同期的に呼び出し）
-    unlockAudio().then(() => {
+    setIsProcessing(true);
+    try {
+      // モバイルブラウザ用: オーディオ権限を取得
+      await unlockAudio();
       console.log('[Player] Audio unlock completed');
-    });
-    // すぐに再生開始
-    startPlayback();
-  };
+      // 再生開始
+      startPlayback();
+    } catch (e) {
+      console.error('[Player] Simple playback error:', e);
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [isProcessing, startPlayback]);
 
   return (
     <div className="p-4">
@@ -198,15 +234,15 @@ export function Player() {
         {/* 再生ボタン */}
         <button
           onClick={handleSimplePlay}
-          disabled={isPlaying}
+          disabled={isPlaying || isProcessing}
           className={`w-12 h-12 rounded-full flex items-center justify-center text-xl flex-shrink-0 shadow-lg transition-all ${
-            isPlaying
+            isPlaying || isProcessing
               ? 'bg-gray-400 cursor-not-allowed opacity-50'
               : 'bg-accent hover:bg-accent-hover text-white'
           }`}
-          title="再生"
+          title={isProcessing ? '処理中...' : '再生'}
         >
-          ▶️
+          {isProcessing ? '⏳' : '▶️'}
         </button>
 
         {/* 停止ボタン */}
